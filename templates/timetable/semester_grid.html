@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Timetable{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-semibold text-gray-900">Timetable</h1>
+        {% if semester %}
+            <p class="text-sm text-gray-500">{{ semester }}</p>
+        {% endif %}
+    </div>
+
+    <div class="flex items-end gap-2">
+        <form method="get" action="{% url 'timetable:grid' %}" class="flex items-end gap-2">
+            <div>
+                <label for="semester-select" class="field-label">Semester</label>
+                <select id="semester-select" onchange="window.location.href='/timetable/semester/' + this.value + '/'" class="input-field">
+                    {% for s in semesters %}
+                        <option value="{{ s.pk }}" {% if semester and s.pk == semester.pk %}selected{% endif %}>
+                            {{ s.program.code }} - {{ s }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+        {% if semester %}
+        <a href="{% url 'timetable:schedule' semester.pk %}" class="btn-primary">
+            {% icon 'plus' 'h-4 w-4' %}
+            Schedule a Class
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card page-enter">
+    {% include 'timetable/_grid.html' with grid=grid editable=True %}
+</div>
+{% endblock %}

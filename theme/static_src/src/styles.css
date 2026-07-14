@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+/**
+  * A catch-all path to Django template files, JavaScript, and Python files
+  * that contain Tailwind CSS classes and will be scanned by Tailwind to generate the final CSS file.
+  *
+  * If your final CSS file is not being updated after code changes, you may want to broaden or narrow
+  * the scope of this path.
+  */
+@source "../../../**/*.{html,py,js}";
+
+@theme {
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-fade-in-up: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-scale-in: scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+
+/*
+  Tailwind v4's `@apply` only accepts real utilities (built-in or ones
+  registered via `@utility`), not other hand-written classes in this file -
+  so every component class below spells out its own full utility list
+  rather than composing `.card` into `.card-link` etc.
+*/
+@layer components {
+  /* Surfaces */
+  .card {
+    @apply rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200;
+  }
+  .card-hover {
+    @apply rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200
+      hover:-translate-y-0.5 hover:shadow-lg;
+  }
+  .card-link {
+    @apply block cursor-pointer rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200
+      hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg
+      bg-gradient-to-r from-blue-700 to-indigo-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm
+      transition-all duration-150 hover:from-blue-800 hover:to-indigo-800 hover:shadow-md
+      active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg
+      border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm
+      transition-all duration-150 hover:border-gray-400 hover:bg-gray-50
+      active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg
+      bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm
+      transition-all duration-150 hover:bg-red-700
+      active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .link {
+    @apply font-medium text-blue-700 underline-offset-2 transition-colors hover:text-blue-900 hover:underline;
+  }
+  .link-danger {
+    @apply font-medium text-red-600 underline-offset-2 transition-colors hover:text-red-800 hover:underline;
+  }
+
+  /* Forms */
+  .input-field {
+    @apply w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm
+      transition-all duration-150 placeholder:text-gray-400
+      focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-600/10;
+  }
+  .checkbox-field {
+    @apply h-4 w-4 rounded border-gray-300 text-blue-700 transition focus:ring-2 focus:ring-blue-600/30;
+  }
+  .field-label {
+    @apply mb-1.5 block text-sm font-medium text-gray-700;
+  }
+
+  /* Badges */
+  .badge-green { @apply inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700; }
+  .badge-red { @apply inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700; }
+  .badge-yellow { @apply inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-700; }
+  .badge-blue { @apply inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700; }
+  .badge-gray { @apply inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600; }
+
+  /* Tables */
+  .table-wrap {
+    @apply overflow-x-auto rounded-lg;
+  }
+  .table-modern {
+    @apply min-w-full divide-y divide-gray-200 text-sm;
+  }
+  .table-modern thead tr {
+    @apply text-left text-xs font-semibold uppercase tracking-wider text-gray-500;
+  }
+  .table-modern thead th {
+    @apply py-3 pr-4;
+  }
+  .table-modern tbody {
+    @apply divide-y divide-gray-100;
+  }
+  .table-modern tbody tr {
+    @apply transition-colors duration-150 hover:bg-blue-50/60;
+  }
+  .table-modern tbody td {
+    @apply py-3 pr-4;
+  }
+
+  /* Stat tiles */
+  .stat-tile {
+    @apply flex items-center gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200
+      hover:-translate-y-0.5 hover:shadow-lg;
+  }
+  .stat-icon {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg;
+  }
+
+  /* Nav */
+  .nav-link {
+    @apply flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-blue-100
+      transition-colors duration-150 hover:bg-white/10 hover:text-white;
+  }
+  .nav-link-active {
+    @apply bg-white/15 text-white shadow-inner;
+  }
+
+  /* Page header animation wrapper */
+  .page-enter {
+    @apply animate-fade-in-up;
+  }
+  .stagger > * {
+    @apply animate-fade-in-up;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 40ms; }
+  .stagger > *:nth-child(3) { animation-delay: 80ms; }
+  .stagger > *:nth-child(4) { animation-delay: 120ms; }
+  .stagger > *:nth-child(5) { animation-delay: 160ms; }
+  .stagger > *:nth-child(6) { animation-delay: 200ms; }
+  .stagger > *:nth-child(n+7) { animation-delay: 240ms; }
+}

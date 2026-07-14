@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}{{ offering }} - Assessments{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-2">
+    <div>
+        <h1 class="text-2xl font-semibold text-gray-900">{{ offering.course }}</h1>
+        <p class="text-sm text-gray-500">
+            {{ offering.semester }} &middot; Section {{ offering.section }} &middot;
+            Total weight assigned: {{ total_weight }}%
+        </p>
+    </div>
+    <a href="{% url 'assessments:assessment-new' offering.pk %}" class="btn-primary">
+        {% icon 'plus' 'h-4 w-4' %}
+        New Assessment
+    </a>
+</div>
+
+<div class="card page-enter">
+    {% if assessments %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Title</th>
+                    <th>Total Marks</th>
+                    <th>Weight</th>
+                    <th>Graded</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in assessments %}
+                <tr>
+                    <td>{{ assessment.date }}</td>
+                    <td><span class="badge-blue">{{ assessment.category }}</span></td>
+                    <td class="font-medium text-gray-900">{{ assessment.title }}</td>
+                    <td>{{ assessment.total_marks }}</td>
+                    <td>{{ assessment.weight_percent }}%</td>
+                    <td>{{ assessment.marks_count }}</td>
+                    <td>
+                        <a href="{% url 'assessments:marks' assessment.pk %}" class="link">Enter / Edit marks</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No assessments created yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load common_extras icons %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-2">
+    <h1 class="text-2xl font-semibold text-gray-900">{{ page_title }}</h1>
+    {% if add_url_name %}
+        <a href="{% url add_url_name %}" class="btn-primary">
+            {% icon 'plus' 'h-4 w-4' %}
+            Add
+        </a>
+    {% endif %}
+</div>
+
+<div class="card page-enter">
+    {% if object_list %}
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                {% for attr, label in list_display %}<th>{{ label }}</th>{% endfor %}
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obj in object_list %}
+            <tr>
+                {% for attr, label in list_display %}<td>{{ obj|get_attr:attr }}</td>{% endfor %}
+                <td class="whitespace-nowrap">
+                    {% if edit_url_name %}<a href="{% url edit_url_name obj.pk %}" class="link">Edit</a>{% endif %}
+                    {% if delete_url_name %}<a href="{% url delete_url_name obj.pk %}" class="link-danger ml-3">Delete</a>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% if is_paginated %}
+    <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 text-sm text-gray-500">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="link">&laquo; Previous</a>
+        {% else %}<span></span>{% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="link">Next &raquo;</a>
+        {% else %}<span></span>{% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+        <div class="py-8 text-center">
+            <p class="text-sm text-gray-500">No records yet.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

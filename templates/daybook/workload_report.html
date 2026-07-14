@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Workload Report{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">Faculty Workload &amp; Payroll Report</h1>
+
+<div class="card mb-6 flex flex-wrap items-end justify-between gap-4">
+    <form method="get" class="flex items-end gap-2">
+        <div>
+            <label for="month" class="field-label">Month</label>
+            <input type="month" id="month" name="month" value="{{ month_value }}" class="input-field">
+        </div>
+        <button type="submit" class="btn-secondary">View</button>
+    </form>
+
+    <div class="flex items-end gap-2">
+        {% include 'common/_export_buttons.html' with csv_url=export_urls.csv excel_url=export_urls.excel pdf_url=export_urls.pdf %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="month" value="{{ month_value }}">
+            <button type="submit" class="btn-primary">
+                {% if snapshot_generated %}Refresh Payroll Snapshot{% else %}Generate Payroll Snapshot{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if snapshot_generated %}
+<p class="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700">
+    {% icon 'check-circle' 'h-5 w-5 shrink-0' %}
+    A payroll snapshot has been generated for this month.
+</p>
+{% endif %}
+
+<div class="card page-enter">
+    {% if rows %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Employee ID</th>
+                    <th>Teacher</th>
+                    <th>Department</th>
+                    <th>Delivered</th>
+                    <th>Verified</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>{{ row.teacher.employee_id }}</td>
+                    <td class="font-medium text-gray-900">{{ row.teacher.user.get_full_name }}</td>
+                    <td>{{ row.teacher.department.code }}</td>
+                    <td>{{ row.total_lectures }}</td>
+                    <td>{{ row.verified_lectures }}</td>
+                    <td>Rs. {{ row.per_lecture_rate }}</td>
+                    <td class="font-medium text-gray-900">Rs. {{ row.total_amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="font-semibold text-gray-900">
+                    <td class="py-3" colspan="6">Total</td>
+                    <td class="py-3">Rs. {{ total_amount }}</td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+        <p class="mt-4 text-xs text-gray-400">Payroll amounts are based on verified lectures only.</p>
+    {% else %}
+        <p class="text-sm text-gray-500">No teachers found.</p>
+    {% endif %}
+</div>
+{% endblock %}

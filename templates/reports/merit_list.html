@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Semester Merit List{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-semibold text-gray-900">Semester Merit List</h1>
+        {% if semester %}<p class="text-sm text-gray-500">{{ semester }}</p>{% endif %}
+    </div>
+    {% if export_urls %}
+        {% include 'common/_export_buttons.html' with excel_url=export_urls.excel pdf_url=export_urls.pdf %}
+    {% endif %}
+</div>
+
+<form method="get" class="card mb-6 flex items-end gap-2">
+    <div>
+        <label for="semester" class="field-label">Semester</label>
+        <select id="semester" name="semester" class="input-field">
+            {% for s in semesters %}
+                <option value="{{ s.pk }}" {% if semester and s.pk == semester.pk %}selected{% endif %}>
+                    {{ s.program.code }} - {{ s }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn-secondary">View</button>
+</form>
+
+{% if semester %}
+<div class="card page-enter">
+    {% if rows %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Roll No.</th>
+                    <th>Student</th>
+                    <th>GPA</th>
+                    <th>Credit Hours</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>
+                        {% if forloop.counter <= 3 %}<span class="badge-yellow">#{{ forloop.counter }}</span>
+                        {% else %}{{ forloop.counter }}{% endif %}
+                    </td>
+                    <td>{{ row.student.roll_number }}</td>
+                    <td class="font-medium text-gray-900">{{ row.student.user.get_full_name }}</td>
+                    <td class="font-semibold text-gray-900">{{ row.gpa }}</td>
+                    <td>{{ row.total_credit_hours }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No graded results for this semester yet.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

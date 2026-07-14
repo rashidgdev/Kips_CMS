@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Student Fees{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-2">
+    <h1 class="text-2xl font-semibold text-gray-900">Student Fees</h1>
+    {% include 'common/_export_buttons.html' with csv_url=export_urls.csv excel_url=export_urls.excel pdf_url=export_urls.pdf %}
+</div>
+
+<div class="card page-enter">
+    {% if summary %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Roll No.</th>
+                    <th>Student</th>
+                    <th>Program</th>
+                    <th>Total Due</th>
+                    <th>Total Paid</th>
+                    <th>Outstanding</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary %}
+                <tr>
+                    <td>{{ row.student.roll_number }}</td>
+                    <td class="font-medium text-gray-900">{{ row.student.user.get_full_name }}</td>
+                    <td>{{ row.student.program.code }}</td>
+                    <td>Rs. {{ row.total_due }}</td>
+                    <td>Rs. {{ row.total_paid }}</td>
+                    <td>
+                        <span class="{% if row.total_outstanding > 0 %}font-semibold text-red-600{% endif %}">
+                            Rs. {{ row.total_outstanding }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'finance:student-detail' row.student.pk %}" class="link">Manage</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No students found.</p>
+    {% endif %}
+</div>
+{% endblock %}

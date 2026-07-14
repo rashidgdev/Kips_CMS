@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Challan {{ challan.challan_number }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-2">
+    <div>
+        <h1 class="text-2xl font-semibold text-gray-900">Challan {{ challan.challan_number }}</h1>
+        <p class="text-sm text-gray-500">{{ challan.student.roll_number }} - {{ challan.student.user.get_full_name }} &middot; {{ challan.semester }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'finance:challan-pdf' challan.pk %}" target="_blank" class="btn-secondary">
+            {% icon 'document-chart' 'h-4 w-4' %}
+            View / Print PDF
+        </a>
+        {% if status != 'cancelled' %}
+        <form method="post" action="{% url 'finance:challan-cancel' challan.pk %}"
+              onsubmit="return confirm('Cancel this challan? This cannot be undone.');">
+            {% csrf_token %}
+            <button type="submit" class="btn-danger">Cancel Challan</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    {% include 'common/_stat_tile.html' with icon='calendar' label='Issue Date' value=challan.issue_date color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='clock' label='Due Date' value=challan.due_date color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='banknotes' label='Total Amount' value=challan.total_amount prefix='Rs.' color='bg-emerald-50 text-emerald-700' %}
+    <div class="stat-tile">
+        <span class="stat-icon bg-gray-100 text-gray-600">{% icon 'check-circle' 'h-5 w-5' %}</span>
+        <div class="min-w-0">
+            <p class="truncate text-xs font-medium text-gray-500">Status</p>
+            <p class="text-lg font-semibold">
+                {% if status == 'paid' %}<span class="badge-green">Paid</span>
+                {% elif status == 'cancelled' %}<span class="badge-gray">Cancelled</span>
+                {% else %}<span class="badge-yellow">Unpaid</span>{% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card page-enter">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Covered Fee Items</h2>
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in lines %}
+            <tr>
+                <td class="font-medium text-gray-900">{{ line.fee_item.category }}</td>
+                <td>Rs. {{ line.amount }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

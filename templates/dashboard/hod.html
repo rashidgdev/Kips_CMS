@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}HOD Dashboard{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+<p class="mb-6 text-sm text-gray-500">Head of Department &middot; {{ department|default:profile.department }}</p>
+
+<div class="card page-enter">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Your Course Offerings</h2>
+    {% if offerings %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Semester</th>
+                    <th>Section</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for offering in offerings %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ offering.course }}</td>
+                    <td>{{ offering.semester }}</td>
+                    <td>{{ offering.section }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No course offerings assigned yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

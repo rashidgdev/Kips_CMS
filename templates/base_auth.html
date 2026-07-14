@@ -1,0 +1,19 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sign in{% endblock %} - KIPS CMS</title>
+    {% tailwind_css %}
+</head>
+<body class="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 px-4">
+    <div class="pointer-events-none absolute inset-0 bg-center bg-no-repeat opacity-[0.08]"
+         style="background-image:url('{% static 'images/campus-watermark.jpg' %}'); background-size: min(80%, 1000px);"></div>
+    <div class="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl"></div>
+    <div class="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl"></div>
+    <div class="relative w-full animate-fade-in-up">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

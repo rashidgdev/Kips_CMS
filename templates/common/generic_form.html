@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">{{ page_title }}</h1>
+
+<div class="card page-enter max-w-lg">
+    <form method="post">
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}
+            <p class="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                {% icon 'warning' 'h-4 w-4 shrink-0' %}{{ error }}
+            </p>
+        {% endfor %}
+        <div class="space-y-4">
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="field-label">
+                {{ field.label }}
+                {% if not field.field.required %}<span class="font-normal text-gray-400">(optional)</span>{% endif %}
+            </label>
+            {{ field }}
+            {% if field.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}
+                <p class="mt-1.5 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        </div>
+        <div class="mt-6 flex items-center gap-3 border-t border-gray-100 pt-5">
+            <button type="submit" class="btn-primary">Save</button>
+            <a href="{{ cancel_url }}" class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

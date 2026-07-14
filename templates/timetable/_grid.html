@@ -1,0 +1,46 @@
+{% load icons %}
+{% if grid.rows %}
+<div class="table-wrap">
+<table class="min-w-full border-separate border-spacing-1 text-sm">
+    <thead>
+        <tr>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">Time</th>
+            {% for day_value, day_label in grid.days %}
+                <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">{{ day_label }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in grid.rows %}
+        <tr>
+            <td class="whitespace-nowrap rounded-lg bg-gray-50 px-3 py-2 align-top text-xs font-medium text-gray-500">
+                {{ row.period.label }}<br>
+                {{ row.period.start_time|time:"H:i" }}-{{ row.period.end_time|time:"H:i" }}
+            </td>
+            {% for cell in row.cells %}
+            <td class="min-w-[9rem] align-top">
+                {% if cell.entry %}
+                    <div class="animate-scale-in rounded-lg border border-blue-100 bg-blue-50/70 p-2.5 transition-shadow hover:shadow-sm">
+                        <div class="font-semibold text-blue-900">{{ cell.entry.course_offering.course.code }}</div>
+                        <div class="mt-0.5 text-xs text-blue-800/70">{{ cell.entry.room }}</div>
+                        <div class="text-xs text-blue-800/70">{{ cell.entry.course_offering.teacher.user.get_full_name }}</div>
+                        {% if editable %}
+                        <form method="post" action="{% url 'timetable:unschedule' cell.entry.pk %}" class="mt-1.5">
+                            {% csrf_token %}
+                            <button type="submit" class="link-danger text-xs">Remove</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="flex h-full min-h-[3.5rem] items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-300">&ndash;</div>
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p class="text-sm text-gray-500">No time slots configured yet.</p>
+{% endif %}

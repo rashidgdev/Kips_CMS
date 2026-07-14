@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}People{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-2">
+    <h1 class="text-2xl font-semibold text-gray-900">People</h1>
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'accounts:student-new' %}" class="btn-primary">{% icon 'user-plus' 'h-4 w-4' %}Student</a>
+        <a href="{% url 'accounts:teacher-new' %}" class="btn-primary">{% icon 'user-plus' 'h-4 w-4' %}Teacher/HOD</a>
+        {% if role == 'admin' %}
+        <a href="{% url 'accounts:staff-new' %}" class="btn-primary">{% icon 'user-plus' 'h-4 w-4' %}Staff</a>
+        {% endif %}
+        <a href="{% url 'accounts:student-import' %}" class="btn-secondary">{% icon 'document-chart' 'h-4 w-4' %}Import Students</a>
+        <a href="{% url 'accounts:teacher-import' %}" class="btn-secondary">{% icon 'document-chart' 'h-4 w-4' %}Import Teachers</a>
+    </div>
+</div>
+
+<form method="get" class="card mb-4 flex items-end gap-2">
+    <div>
+        <label for="role" class="field-label">Filter by role</label>
+        <select id="role" name="role" class="input-field">
+            <option value="">All roles</option>
+            {% for value, label in roles %}
+                <option value="{{ value }}" {% if value == role_filter %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn-secondary">Filter</button>
+</form>
+
+<div class="card page-enter">
+    {% if users %}
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for person in users %}
+            <tr>
+                <td class="font-medium text-gray-900">{{ person.get_full_name }}</td>
+                <td>{{ person.username }}</td>
+                <td>{{ person.get_role_display }}</td>
+                <td>{{ person.email }}</td>
+                <td>
+                    {% if person.is_active %}
+                        <span class="badge-green">Active</span>
+                    {% else %}
+                        <span class="badge-gray">Inactive</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap">
+                    {% if person.role == 'student' and person.student_profile %}
+                        <a href="{% url 'accounts:student-edit' person.student_profile.pk %}" class="link">Edit</a>
+                    {% elif person.role == 'teacher' or person.role == 'hod' %}
+                        {% if person.teacher_profile %}
+                            <a href="{% url 'accounts:teacher-edit' person.teacher_profile.pk %}" class="link">Edit</a>
+                        {% endif %}
+                    {% elif person.staff_profile %}
+                        {% if role == 'admin' %}
+                            <a href="{% url 'accounts:staff-edit' person.staff_profile.pk %}" class="link">Edit</a>
+                        {% endif %}
+                    {% endif %}
+                    <form method="post" action="{% url 'accounts:toggle-active' person.pk %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="ml-3 text-xs font-medium underline-offset-2 hover:underline {% if person.is_active %}text-red-600{% else %}text-green-700{% endif %}">
+                            {% if person.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No people found.</p>
+    {% endif %}
+</div>
+{% endblock %}

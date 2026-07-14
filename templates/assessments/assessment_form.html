@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}New Assessment{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">New Assessment</h1>
+<p class="mb-6 text-sm text-gray-500">{{ offering.course }} &middot; {{ offering.semester }} &middot; Section {{ offering.section }}</p>
+
+<div class="card page-enter max-w-md">
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="field-label">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}
+                <p class="mt-1.5 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn-primary w-full">
+            Save &amp; Enter Marks
+        </button>
+    </form>
+</div>
+{% endblock %}

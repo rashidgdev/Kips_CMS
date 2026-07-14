@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Mark Attendance{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">{{ session.course_offering.course }}</h1>
+<p class="mb-6 text-sm text-gray-500">{{ session.date }} &middot; {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}{% if session.topic_covered %} &middot; {{ session.topic_covered }}{% endif %}</p>
+
+<div class="card page-enter">
+    {% if rows %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Roll No.</th>
+                    <th>Student</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>{{ row.student.roll_number }}</td>
+                    <td class="font-medium text-gray-900">{{ row.student.user.get_full_name }}</td>
+                    <td>
+                        <select name="status_{{ row.student.pk }}" class="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm transition-colors focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if value == row.status %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <button type="submit" class="btn-primary mt-5">
+            Save Attendance
+        </button>
+    </form>
+    {% else %}
+        <p class="text-sm text-gray-500">No students are enrolled in this course offering yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

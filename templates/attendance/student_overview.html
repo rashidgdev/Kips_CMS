@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}My Attendance{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">My Attendance</h1>
+
+<div class="card page-enter">
+    {% if stats %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Delivered</th>
+                    <th>Attended</th>
+                    <th>Absent</th>
+                    <th>%</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in stats %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ stat.course_offering.course }}</td>
+                    <td>{{ stat.delivered }}</td>
+                    <td>{{ stat.attended }}</td>
+                    <td>{{ stat.absent }}</td>
+                    <td>
+                        {% if stat.percentage is not None %}
+                            <span class="{% if stat.is_shortage %}font-semibold text-red-600{% endif %}">{{ stat.percentage }}%</span>
+                            {% if stat.is_shortage %}
+                                <span class="badge-red ml-1">{% icon 'warning' 'h-3 w-3' %}Shortage</span>
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'attendance:student-detail' stat.course_offering.pk %}" class="link">Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <p class="mt-4 text-xs text-gray-400">Minimum required attendance is {{ stats.0.threshold }}%.</p>
+    {% else %}
+        <p class="text-sm text-gray-500">No course enrollments yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

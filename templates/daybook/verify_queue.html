@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Verify Day Book{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">Verify Day Book Entries</h1>
+
+<div class="card page-enter">
+    {% if pending %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Teacher</th>
+                    <th>Course</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in pending %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ entry.session.date }}</td>
+                    <td>{{ entry.session.course_offering.teacher.user.get_full_name }}</td>
+                    <td>{{ entry.session.course_offering.course }}</td>
+                    <td>
+                        <form method="post" action="{% url 'daybook:verify' entry.pk %}" class="flex items-center gap-2">
+                            {% csrf_token %}
+                            <input type="text" name="remarks" placeholder="Optional remarks" class="input-field w-40 py-1.5">
+                            <button type="submit" class="btn-primary btn-sm">Verify</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No pending day book entries. Everything is verified.</p>
+    {% endif %}
+</div>
+{% endblock %}

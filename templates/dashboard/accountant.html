@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Accountant Dashboard{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+<p class="mb-6 text-sm text-gray-500">Accountant</p>
+
+<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    {% include 'common/_stat_tile.html' with icon='users' label='Students' value=student_count color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='banknotes' label='Total Due' value=total_due prefix='Rs.' color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='trending-up' label='Total Collected' value=total_paid prefix='Rs.' color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_stat_tile.html' with icon='currency' label='Outstanding' value=total_outstanding prefix='Rs.' color='bg-red-50 text-red-700' %}
+</div>
+
+<div class="card page-enter flex flex-wrap items-center gap-2 text-sm text-gray-600">
+    {% icon 'banknotes' 'h-5 w-5 shrink-0 text-gray-400' %}
+    <span>
+        Manage student fee items and record payments in
+        <a href="{% url 'finance:students' %}" class="link">Student Fees</a>,
+        or set up fee categories and program fee structures in
+        <a href="{% url 'dashboard:admin-portal' %}" class="link">Administration</a>.
+    </span>
+</div>
+{% endblock %}

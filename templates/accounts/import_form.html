@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">{{ page_title }}</h1>
+
+<div class="card page-enter mb-6 max-w-2xl">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}
+            <p class="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                {% icon 'warning' 'h-4 w-4 shrink-0' %}{{ error }}
+            </p>
+        {% endfor %}
+        <div class="space-y-4">
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="field-label">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}
+                <p class="mt-1.5 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        </div>
+        <div class="mt-6 flex items-center gap-3 border-t border-gray-100 pt-5">
+            <button type="submit" class="btn-primary">
+                {% icon 'plus' 'h-4 w-4' %}
+                Upload &amp; Import
+            </button>
+            <a href="{{ cancel_url }}" class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="card page-enter max-w-2xl">
+    <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Expected Columns</h2>
+        <a href="{{ template_url }}" class="btn-secondary btn-sm">
+            {% icon 'document-chart' 'h-3.5 w-3.5' %}
+            Download Template
+        </a>
+    </div>
+    <p class="mb-4 text-sm text-gray-500">
+        Column order doesn't matter - just match these header names in row 1 of your spreadsheet.
+        Each account gets a temporary password, shown once after import.
+    </p>
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Column</th>
+                <th>Required</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for name, required, note in columns %}
+            <tr>
+                <td class="font-mono text-xs font-medium text-gray-900">{{ name }}</td>
+                <td>
+                    {% if required %}<span class="badge-red">Required</span>
+                    {% else %}<span class="badge-gray">Optional</span>{% endif %}
+                </td>
+                <td class="text-gray-500">{{ note }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

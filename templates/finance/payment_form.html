@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Record Payment{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Record Payment</h1>
+<p class="mb-6 text-sm text-gray-500">
+    {{ fee_item.student.roll_number }} &middot; {{ fee_item.category }} &middot; {{ fee_item.semester }} &middot;
+    Outstanding: Rs. {{ balance.outstanding }}
+</p>
+
+<div class="card page-enter max-w-md">
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}
+            <p class="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                {% icon 'warning' 'h-4 w-4 shrink-0' %}{{ error }}
+            </p>
+        {% endfor %}
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="field-label">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}
+                <p class="mt-1.5 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn-primary w-full">
+            Record Payment
+        </button>
+    </form>
+</div>
+{% endblock %}

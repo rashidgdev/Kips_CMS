@@ -1,0 +1,12 @@
+{% load icons %}
+<div class="flex items-end gap-2">
+    {% if csv_url %}
+        <a href="{{ csv_url }}" class="btn-secondary btn-sm">{% icon 'document-chart' 'h-3.5 w-3.5' %}CSV</a>
+    {% endif %}
+    {% if excel_url %}
+        <a href="{{ excel_url }}" class="btn-secondary btn-sm">{% icon 'document-chart' 'h-3.5 w-3.5' %}Excel</a>
+    {% endif %}
+    {% if pdf_url %}
+        <a href="{{ pdf_url }}" class="btn-secondary btn-sm">{% icon 'document-chart' 'h-3.5 w-3.5' %}PDF</a>
+    {% endif %}
+</div>

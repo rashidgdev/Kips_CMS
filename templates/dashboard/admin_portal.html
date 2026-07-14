@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Administration{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Administration</h1>
+<p class="mb-8 text-sm text-gray-500">
+    Manage the reference and setup data that powers the rest of the portal - no need to use the Django Admin Panel.
+</p>
+
+{% if role == 'coordinator' or role == 'admin' %}
+<h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-400">People</h2>
+<div class="stagger mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% include 'common/_portal_card.html' with url=people_url|default:'' icon='user-plus' title='Students, Teachers & Staff' description='Add students/teachers at admission, activate/deactivate accounts.' color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_portal_card.html' with url=departments_url|default:'' icon='building' title='Departments' description='Academic departments and their HOD.' color='bg-indigo-50 text-indigo-700' %}
+</div>
+
+<h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-400">Academics</h2>
+<div class="stagger mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% include 'common/_portal_card.html' with url=programs_url|default:'' icon='book-open' title='Programs' description='Degree programs offered by the campus.' color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_portal_card.html' with url=semesters_url|default:'' icon='calendar' title='Semesters' description='Semester terms per program, including the current one.' color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_portal_card.html' with url=courses_url|default:'' icon='academic-cap' title='Courses' description='The course catalog for each program.' color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_portal_card.html' with url=offerings_url|default:'' icon='clipboard-list' title='Faculty Assignments' description='Assign a course + section to a teacher for a semester.' color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_portal_card.html' with url=enrollments_url|default:'' icon='users' title='Enrollments' description='Enroll or drop a student from a course offering.' color='bg-indigo-50 text-indigo-700' %}
+</div>
+
+<h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-400">Timetable Setup</h2>
+<div class="stagger mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% include 'common/_portal_card.html' with url=rooms_url|default:'' icon='building' title='Rooms' description='Classrooms and labs available for scheduling.' color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_portal_card.html' with url=timeslots_url|default:'' icon='clock' title='Time Slots' description='The weekly day/period catalog used by the timetable grid.' color='bg-indigo-50 text-indigo-700' %}
+</div>
+
+<h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-400">Assessment Setup</h2>
+<div class="stagger mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% include 'common/_portal_card.html' with url=assessment_categories_url|default:'' icon='document-chart' title='Assessment Categories' description='Quiz, Assignment, Midterm, etc. and their default weights.' color='bg-blue-50 text-blue-700' %}
+</div>
+{% endif %}
+
+{% if role == 'accountant' or role == 'admin' %}
+<h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-400">Finance Setup</h2>
+<div class="stagger mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% include 'common/_portal_card.html' with url=fee_categories_url|default:'' icon='currency' title='Fee Categories' description='Tuition, Registration, Exam Fee, etc.' color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_portal_card.html' with url=fee_structures_url|default:'' icon='banknotes' title='Fee Structures' description='The standard fee package per program.' color='bg-blue-50 text-blue-700' %}
+</div>
+{% endif %}
+{% endblock %}

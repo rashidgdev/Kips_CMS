@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">{{ title }}</h1>
+
+<div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    {% include 'common/_stat_tile.html' with icon='check-circle' label='Created' value=created|length color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_stat_tile.html' with icon='warning' label='Skipped (errors)' value=errors|length color='bg-red-50 text-red-700' %}
+</div>
+
+{% if created %}
+<div class="card page-enter mb-6">
+    <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Created Accounts</h2>
+        {% if csv_url %}
+        <a href="{{ csv_url }}" class="btn-secondary btn-sm">
+            {% icon 'document-chart' 'h-3.5 w-3.5' %}
+            Download Credentials (CSV)
+        </a>
+        {% endif %}
+    </div>
+    <p class="mb-4 flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2.5 text-sm text-yellow-800">
+        {% icon 'warning' 'h-4 w-4 shrink-0' %}
+        These temporary passwords are shown once. Download the CSV now if you need to distribute them.
+    </p>
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Row</th>
+                <th>Username</th>
+                <th>Name</th>
+                <th>ID</th>
+                <th>Temporary Password</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in created %}
+            <tr>
+                <td>{{ row.row }}</td>
+                <td class="font-medium text-gray-900">{{ row.username }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.identifier }}</td>
+                <td class="font-mono text-xs">{{ row.password }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+{% if errors %}
+<div class="card page-enter">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Skipped Rows</h2>
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Row</th>
+                <th>Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in errors %}
+            <tr>
+                <td>{{ row.row }}</td>
+                <td class="text-red-700">{{ row.message }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="mt-6">
+    <a href="{% url 'accounts:people' %}" class="link">&larr; Back to People</a>
+</div>
+{% endblock %}

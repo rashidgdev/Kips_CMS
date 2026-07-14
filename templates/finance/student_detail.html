@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}{{ student }} - Fees{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-2">
+    <div>
+        <h1 class="text-2xl font-semibold text-gray-900">{{ student.user.get_full_name }}</h1>
+        <p class="text-sm text-gray-500">{{ student.roll_number }} &middot; {{ student.program }}</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+        <form method="post" action="{% url 'finance:generate' student.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-secondary">
+                Generate Fee Items ({{ student.current_semester|default:"no current semester" }})
+            </button>
+        </form>
+        <form method="post" action="{% url 'finance:challan-generate' student.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary">
+                Generate Challan
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {% include 'common/_stat_tile.html' with icon='banknotes' label='Total Due' value=overview.total_due prefix='Rs.' color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='trending-up' label='Total Paid' value=overview.total_paid prefix='Rs.' color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_stat_tile.html' with icon='currency' label='Outstanding' value=overview.total_outstanding prefix='Rs.' color='bg-red-50 text-red-700' %}
+</div>
+
+<div class="card page-enter">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Fee Items</h2>
+    {% if overview.rows %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Semester</th>
+                    <th>Category</th>
+                    <th>Due</th>
+                    <th>Paid</th>
+                    <th>Outstanding</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in overview.rows %}
+                <tr>
+                    <td>{{ row.item.semester }}</td>
+                    <td class="font-medium text-gray-900">{{ row.item.category }}</td>
+                    <td>Rs. {{ row.item.amount_due }}</td>
+                    <td>Rs. {{ row.paid }}</td>
+                    <td>Rs. {{ row.outstanding }}</td>
+                    <td>{{ row.item.due_date }}</td>
+                    <td>{% include 'finance/_status_badge.html' with status=row.status %}</td>
+                    <td>
+                        {% if row.outstanding > 0 %}
+                            <a href="{% url 'finance:pay' row.item.pk %}" class="link">Record Payment</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No fee items yet. Use "Generate Fee Items" above.</p>
+    {% endif %}
+</div>
+
+<div class="card page-enter mt-6">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Challans</h2>
+    {% if challans %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Challan No.</th>
+                    <th>Semester</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in challans %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ row.challan.challan_number }}</td>
+                    <td>{{ row.challan.semester }}</td>
+                    <td>Rs. {{ row.challan.total_amount }}</td>
+                    <td>{{ row.challan.due_date }}</td>
+                    <td>
+                        {% if row.status == 'paid' %}<span class="badge-green">Paid</span>
+                        {% elif row.status == 'cancelled' %}<span class="badge-gray">Cancelled</span>
+                        {% else %}<span class="badge-yellow">Unpaid</span>{% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'finance:challan-pdf' row.challan.pk %}" target="_blank" class="link">PDF</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No challans issued yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

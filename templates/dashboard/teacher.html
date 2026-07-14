@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Teacher Dashboard{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+<p class="mb-6 text-sm text-gray-500">Employee ID {{ profile.employee_id }} &middot; {{ profile.department }}</p>
+
+<div class="card page-enter mb-6">
+    <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+        {% icon 'calendar' 'h-5 w-5 text-blue-700' %}
+        Today's Classes
+    </h2>
+    {% if todays_classes %}
+        <ul class="stagger divide-y divide-gray-100 text-sm">
+            {% for entry in todays_classes %}
+            <li class="flex items-center gap-3 py-3">
+                <span class="badge-blue shrink-0">{{ entry.time_slot.start_time|time:"H:i" }}&ndash;{{ entry.time_slot.end_time|time:"H:i" }}</span>
+                <span class="font-medium text-gray-900">{{ entry.course_offering.course }}</span>
+                <span class="text-gray-400">&middot;</span>
+                <span class="text-gray-500">{{ entry.room }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-sm text-gray-500">No classes scheduled today.</p>
+    {% endif %}
+</div>
+
+<div class="card page-enter">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Your Course Offerings</h2>
+    {% if offerings %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Semester</th>
+                    <th>Section</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for offering in offerings %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ offering.course }}</td>
+                    <td>{{ offering.semester }}</td>
+                    <td>{{ offering.section }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No course offerings assigned yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

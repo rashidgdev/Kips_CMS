@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}{{ offering.course }} - Attendance{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">{{ offering.course }}</h1>
+<p class="mb-6 text-sm text-gray-500">{{ offering.semester }} &middot; Section {{ offering.section }}</p>
+
+<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Delivered' value=stat.delivered color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='check-circle' label='Attended' value=stat.attended color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_stat_tile.html' with icon='warning' label='Absent' value=stat.absent color='bg-red-50 text-red-700' %}
+    {% include 'common/_stat_tile.html' with icon='trending-up' label='Percentage' value=stat.percentage|default:"-" color='bg-indigo-50 text-indigo-700' %}
+</div>
+
+{% if stat.is_shortage %}
+<p class="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+    {% icon 'warning' 'h-5 w-5 shrink-0' %}
+    Your attendance is below the required {{ stat.threshold }}% for this course.
+</p>
+{% endif %}
+
+<div class="card page-enter">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Daily Log</h2>
+    {% if records %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ record.session.date }}</td>
+                    <td>
+                        {% if record.status == 'present' %}<span class="badge-green">{{ record.get_status_display }}</span>
+                        {% elif record.status == 'absent' %}<span class="badge-red">{{ record.get_status_display }}</span>
+                        {% elif record.status == 'late' %}<span class="badge-yellow">{{ record.get_status_display }}</span>
+                        {% else %}<span class="badge-gray">{{ record.get_status_display }}</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No attendance recorded yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

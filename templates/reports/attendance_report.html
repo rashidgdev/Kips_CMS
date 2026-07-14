@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Report{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-semibold text-gray-900">Attendance Report</h1>
+        {% if offering %}<p class="text-sm text-gray-500">{{ offering }}</p>{% endif %}
+    </div>
+    {% if export_urls %}
+        {% include 'common/_export_buttons.html' with excel_url=export_urls.excel pdf_url=export_urls.pdf %}
+    {% endif %}
+</div>
+
+<form method="get" class="card mb-6 flex items-end gap-2">
+    <div>
+        <label for="course_offering" class="field-label">Course</label>
+        <select id="course_offering" name="course_offering" class="input-field">
+            <option value="">Select a course...</option>
+            {% for o in offerings %}
+                <option value="{{ o.pk }}" {% if offering and o.pk == offering.pk %}selected{% endif %}>
+                    {{ o.course }} - {{ o.semester }} - Section {{ o.section }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn-secondary">View</button>
+</form>
+
+{% if offering %}
+<div class="card page-enter">
+    {% if rows %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Roll No.</th>
+                    <th>Student</th>
+                    <th>Delivered</th>
+                    <th>Attended</th>
+                    <th>Absent</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>{{ row.student.roll_number }}</td>
+                    <td class="font-medium text-gray-900">{{ row.student.user.get_full_name }}</td>
+                    <td>{{ row.delivered }}</td>
+                    <td>{{ row.attended }}</td>
+                    <td>{{ row.absent }}</td>
+                    <td>
+                        {% if row.percentage is not None %}
+                            <span class="{% if row.is_shortage %}font-semibold text-red-600{% endif %}">{{ row.percentage }}%</span>
+                        {% else %}-{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No students enrolled in this course.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

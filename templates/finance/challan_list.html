@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Challans{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">Fee Challans</h1>
+
+<div class="card page-enter">
+    {% if rows %}
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Challan No.</th>
+                <th>Student</th>
+                <th>Semester</th>
+                <th>Issue Date</th>
+                <th>Due Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td class="font-medium text-gray-900">{{ row.challan.challan_number }}</td>
+                <td>{{ row.challan.student.roll_number }} - {{ row.challan.student.user.get_full_name }}</td>
+                <td>{{ row.challan.semester }}</td>
+                <td>{{ row.challan.issue_date }}</td>
+                <td>{{ row.challan.due_date }}</td>
+                <td>Rs. {{ row.challan.total_amount }}</td>
+                <td>
+                    {% if row.status == 'paid' %}<span class="badge-green">Paid</span>
+                    {% elif row.status == 'cancelled' %}<span class="badge-gray">Cancelled</span>
+                    {% else %}<span class="badge-yellow">Unpaid</span>{% endif %}
+                </td>
+                <td class="whitespace-nowrap">
+                    <a href="{% url 'finance:challan-detail' row.challan.pk %}" class="link">View</a>
+                    <a href="{% url 'finance:challan-pdf' row.challan.pk %}" target="_blank" class="link ml-3">PDF</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No challans issued yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

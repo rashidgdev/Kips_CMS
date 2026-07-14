@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Student Dashboard{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+<p class="mb-6 text-sm text-gray-500">Roll No. {{ profile.roll_number }} &middot; {{ profile.program }}</p>
+
+<div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {% include 'common/_stat_tile.html' with icon='academic-cap' label='CGPA' value=cgpa|default:"-" color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='trending-up' label='Current Semester GPA' value=current_gpa.gpa|default:"-" color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Overall Attendance' value=overall_attendance|default:"-" color='bg-emerald-50 text-emerald-700' %}
+</div>
+
+<div class="card page-enter">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Enrolled Courses</h2>
+    {% if enrollments %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Section</th>
+                    <th>Teacher</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for enrollment in enrollments %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ enrollment.course_offering.course }}</td>
+                    <td>{{ enrollment.course_offering.section }}</td>
+                    <td>{{ enrollment.course_offering.teacher.user.get_full_name }}</td>
+                    <td>
+                        {% if enrollment.status == 'enrolled' %}<span class="badge-green">{{ enrollment.get_status_display }}</span>
+                        {% elif enrollment.status == 'completed' %}<span class="badge-blue">{{ enrollment.get_status_display }}</span>
+                        {% else %}<span class="badge-gray">{{ enrollment.get_status_display }}</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No course enrollments yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

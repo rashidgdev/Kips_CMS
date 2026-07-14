@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Coordinator Dashboard{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+<p class="mb-6 text-sm text-gray-500">Campus Coordinator</p>
+
+<div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    {% include 'common/_stat_tile.html' with icon='book-open' label='Active Programs' value=program_count color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Active Course Offerings' value=offering_count color='bg-blue-50 text-blue-700' %}
+</div>
+
+<div class="card page-enter flex flex-wrap items-center gap-2 text-sm text-gray-600">
+    {% icon 'cog' 'h-5 w-5 shrink-0 text-gray-400' %}
+    <span>
+        Manage programs, semesters, courses, faculty assignments, and enrollments in
+        <a href="{% url 'dashboard:admin-portal' %}" class="link">Administration</a>,
+        or browse attendance, academic, workload, and financial reports in
+        <a href="{% url 'reports:home' %}" class="link">Reports</a>.
+    </span>
+</div>
+{% endblock %}

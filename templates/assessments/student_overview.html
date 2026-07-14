@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}My Grades{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">My Grades</h1>
+
+<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-2">
+    {% include 'common/_stat_tile.html' with icon='trending-up' label='Current Semester GPA' value=current_semester_gpa.gpa|default:"-" color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='academic-cap' label='CGPA' value=cgpa|default:"-" color='bg-indigo-50 text-indigo-700' %}
+</div>
+
+<div class="card page-enter">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Course Performance</h2>
+    {% if results %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Semester</th>
+                    <th>Obtained / Possible</th>
+                    <th>Percentage</th>
+                    <th>Grade</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ result.course_offering.course }}</td>
+                    <td>{{ result.course_offering.semester }}</td>
+                    <td>{{ result.total_obtained }} / {{ result.total_possible }}</td>
+                    <td>{{ result.percentage|default:"-" }}{% if result.percentage %}%{% endif %}</td>
+                    <td>{% if result.grade_letter %}<span class="badge-blue">{{ result.grade_letter }}</span>{% else %}-{% endif %}</td>
+                    <td>
+                        <a href="{% url 'assessments:student-detail' result.course_offering.pk %}" class="link">Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No graded coursework yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
