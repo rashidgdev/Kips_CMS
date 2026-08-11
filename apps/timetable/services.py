@@ -1,3 +1,5 @@
+import datetime
+
 from django.db.models import Q
 
 from .models import TimeSlot, TimetableEntry
@@ -36,6 +38,35 @@ def check_conflicts(course_offering, room, time_slot, exclude_entry_id=None):
         )
 
     return errors
+
+
+def generate_time_slots(days, day_start_time, lecture_duration_minutes, number_of_lectures, break_minutes=0):
+    """Builds `number_of_lectures` back-to-back TimeSlots (Period 1, Period 2, ...)
+    per selected day, instead of the user adding each one by hand. Reuses an
+    existing slot instead of erroring if it already exists (e.g. re-running
+    this after adding a day), so it's safe to run more than once."""
+    break_minutes = break_minutes or 0
+    today = datetime.date.today()
+    created, skipped = [], []
+
+    for day in days:
+        current_start = day_start_time
+        for period_number in range(1, number_of_lectures + 1):
+            current_end = (
+                datetime.datetime.combine(today, current_start) + datetime.timedelta(minutes=lecture_duration_minutes)
+            ).time()
+            slot, was_created = TimeSlot.objects.get_or_create(
+                day_of_week=day,
+                start_time=current_start,
+                end_time=current_end,
+                defaults={'label': f'Period {period_number}'},
+            )
+            (created if was_created else skipped).append(slot)
+
+            next_start_dt = datetime.datetime.combine(today, current_end) + datetime.timedelta(minutes=break_minutes)
+            current_start = next_start_dt.time()
+
+    return created, skipped
 
 
 def build_grid(entries):

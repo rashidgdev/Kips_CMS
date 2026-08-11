@@ -324,6 +324,27 @@ overdue) at once.
   room conflicts are checked. A student having two different enrolled
   courses scheduled in the same slot is not yet flagged.
 
+### Generate Time Slots
+
+- Adding every period one at a time was tedious, so `/timetable/timeslots/generate/`
+  ("Generate Time Slots" button on the Time Slots list) builds a whole day's
+  periods from four inputs: start of the working day, end of the working
+  day, length of each lecture, and number of lectures per day (plus an
+  optional break-between-lectures field, default 0 for back-to-back
+  periods) - applied to every selected working day at once.
+  `apps/timetable/services.py::generate_time_slots()` walks forward from the
+  start time, period by period, labeling them "Period 1", "Period 2", etc.
+- Validated against the working-day end time before anything is created:
+  if the requested lecture count/length/breaks would run past the end of
+  the working day, the form rejects it with a specific message (e.g. which
+  time it would actually end at) instead of silently creating an
+  out-of-hours period.
+- **Safe to re-run**: each period is created via `get_or_create()` on
+  `(day_of_week, start_time, end_time)`, so generating again (e.g. after
+  deciding to add Sunday, or after editing one period by hand) only adds
+  what's missing - existing periods, including the pre-seeded reference
+  ones, are left untouched.
+
 ## Fee & Financial Management (Module 6)
 
 - `apps/finance/models.py`: `FeeCategory` (Tuition/Registration/Exam Fee -

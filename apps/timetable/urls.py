@@ -21,6 +21,7 @@ urlpatterns = [
     path('rooms/<int:pk>/delete/', views.RoomDeleteView.as_view(), name='room-delete'),
 
     path('timeslots/', views.TimeSlotListView.as_view(), name='timeslots'),
+    path('timeslots/generate/', views.timeslot_generate, name='timeslot-generate'),
     path('timeslots/new/', views.TimeSlotCreateView.as_view(), name='timeslot-new'),
     path('timeslots/<int:pk>/edit/', views.TimeSlotUpdateView.as_view(), name='timeslot-edit'),
     path('timeslots/<int:pk>/delete/', views.TimeSlotDeleteView.as_view(), name='timeslot-delete'),

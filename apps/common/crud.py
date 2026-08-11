@@ -19,6 +19,7 @@ class CrudListView(RoleRequiredMixin, ListView):
     add_url_name = None
     edit_url_name = None
     delete_url_name = None
+    extra_actions = ()  # [{'url_name': ..., 'label': ..., 'icon': ...}, ...] - secondary buttons next to Add
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -28,6 +29,7 @@ class CrudListView(RoleRequiredMixin, ListView):
             add_url_name=self.add_url_name,
             edit_url_name=self.edit_url_name,
             delete_url_name=self.delete_url_name,
+            extra_actions=self.extra_actions,
         )
         return context
 

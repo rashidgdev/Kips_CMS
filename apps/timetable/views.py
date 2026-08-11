@@ -9,9 +9,9 @@ from apps.common.exports import export_pdf
 from apps.common.middleware import get_profile
 from apps.common.permissions import role_required
 
-from .forms import RoomForm, TimeSlotForm, TimetableEntryForm
+from .forms import RoomForm, TimeSlotForm, TimeSlotGeneratorForm, TimetableEntryForm
 from .models import Room, TimeSlot, TimetableEntry
-from .services import build_grid, check_conflicts
+from .services import build_grid, check_conflicts, generate_time_slots
 
 _TIMETABLE_PDF_HEADERS = ['Day', 'Time', 'Course', 'Room', 'Teacher']
 
@@ -82,6 +82,7 @@ class TimeSlotListView(CrudListView):
     add_url_name = 'timetable:timeslot-new'
     edit_url_name = 'timetable:timeslot-edit'
     delete_url_name = 'timetable:timeslot-delete'
+    extra_actions = [{'url_name': 'timetable:timeslot-generate', 'label': 'Generate Time Slots', 'icon': 'clock'}]
 
 
 class TimeSlotCreateView(CrudCreateView):
@@ -107,6 +108,32 @@ class TimeSlotDeleteView(CrudDeleteView):
     allowed_roles = STAFF_ROLES
     success_url = reverse_lazy('timetable:timeslots')
     success_message = 'Time slot deleted.'
+
+
+@role_required(*STAFF_ROLES)
+def timeslot_generate(request):
+    if request.method == 'POST':
+        form = TimeSlotGeneratorForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            created, skipped = generate_time_slots(
+                days=[int(d) for d in data['days']],
+                day_start_time=data['day_start_time'],
+                lecture_duration_minutes=data['lecture_duration_minutes'],
+                number_of_lectures=data['number_of_lectures'],
+                break_minutes=data['break_minutes'],
+            )
+            if created:
+                messages.success(request, f'{len(created)} time slot(s) created.')
+            if skipped:
+                messages.info(request, f'{len(skipped)} time slot(s) already existed and were left as-is.')
+            if not created and not skipped:
+                messages.warning(request, 'No days were selected - nothing was generated.')
+            return redirect('timetable:timeslots')
+    else:
+        form = TimeSlotGeneratorForm()
+
+    return render(request, 'timetable/timeslot_generate.html', {'form': form})
 
 
 def _get_semester(semester_id):
