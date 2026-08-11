@@ -1,7 +1,10 @@
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 
-from apps.accounts.models import Roles
+from apps.accounts.models import Roles, StudentProfile
 from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudUpdateView
+from apps.common.permissions import role_required
 
 from .forms import CourseForm, CourseOfferingForm, EnrollmentForm, ProgramForm, SemesterForm
 from .models import Course, CourseOffering, Enrollment, Program, Semester
@@ -225,3 +228,87 @@ class EnrollmentDeleteView(CrudDeleteView):
     allowed_roles = STAFF_ROLES
     success_url = reverse_lazy('academics:enrollments')
     success_message = 'Enrollment removed.'
+
+
+# --- Bulk enrollment ---------------------------------------------------------
+# The generic Enrollment CRUD above handles one student/one offering at a
+# time, which is too slow when registering a whole class or building one
+# student's full course load. These two screens do the same underlying
+# Enrollment.objects.create in bulk.
+
+@role_required(*STAFF_ROLES)
+def enroll_by_offering(request):
+    """Pick one course offering, then enroll many students into it at once."""
+    offerings = CourseOffering.objects.filter(is_active=True).select_related(
+        'course', 'semester', 'course__program'
+    ).order_by('-semester__is_current', 'semester', 'course')
+    selected_offering = None
+    students = []
+    already_enrolled_ids = set()
+
+    offering_id = request.POST.get('offering') or request.GET.get('offering')
+    if offering_id:
+        selected_offering = get_object_or_404(CourseOffering, pk=offering_id)
+        already_enrolled_ids = set(selected_offering.enrollments.values_list('student_id', flat=True))
+        students = StudentProfile.objects.filter(
+            program=selected_offering.course.program, status=StudentProfile.Status.ACTIVE
+        ).select_related('user').order_by('roll_number')
+
+    if request.method == 'POST':
+        student_ids = {int(sid) for sid in request.POST.getlist('student_ids')}
+        if not selected_offering:
+            messages.error(request, 'Select a course offering first.')
+        elif not student_ids:
+            messages.error(request, 'Select at least one student to enroll.')
+        else:
+            new_ids = student_ids - already_enrolled_ids
+            Enrollment.objects.bulk_create(
+                [Enrollment(student_id=sid, course_offering=selected_offering) for sid in new_ids]
+            )
+            messages.success(request, f'Enrolled {len(new_ids)} student(s) in {selected_offering}.')
+            return redirect(f'{request.path}?offering={selected_offering.id}')
+
+    return render(request, 'academics/enroll_by_offering.html', {
+        'offerings': offerings,
+        'selected_offering': selected_offering,
+        'students': students,
+        'already_enrolled_ids': already_enrolled_ids,
+    })
+
+
+@role_required(*STAFF_ROLES)
+def enroll_by_student(request):
+    """Pick one student, then enroll them into many course offerings at once."""
+    students = StudentProfile.objects.select_related('user', 'program').order_by('roll_number')
+    selected_student = None
+    offerings = []
+    already_enrolled_ids = set()
+
+    student_id = request.POST.get('student') or request.GET.get('student')
+    if student_id:
+        selected_student = get_object_or_404(StudentProfile, pk=student_id)
+        already_enrolled_ids = set(selected_student.enrollments.values_list('course_offering_id', flat=True))
+        offerings = CourseOffering.objects.filter(
+            course__program=selected_student.program, is_active=True
+        ).select_related('course', 'semester').order_by('-semester__is_current', 'semester', 'course')
+
+    if request.method == 'POST':
+        offering_ids = {int(oid) for oid in request.POST.getlist('offering_ids')}
+        if not selected_student:
+            messages.error(request, 'Select a student first.')
+        elif not offering_ids:
+            messages.error(request, 'Select at least one course offering.')
+        else:
+            new_ids = offering_ids - already_enrolled_ids
+            Enrollment.objects.bulk_create(
+                [Enrollment(student=selected_student, course_offering_id=oid) for oid in new_ids]
+            )
+            messages.success(request, f'Enrolled {selected_student} in {len(new_ids)} course(s).')
+            return redirect(f'{request.path}?student={selected_student.id}')
+
+    return render(request, 'academics/enroll_by_student.html', {
+        'students': students,
+        'selected_student': selected_student,
+        'offerings': offerings,
+        'already_enrolled_ids': already_enrolled_ids,
+    })

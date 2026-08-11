@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Account Created{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-lg">
+<div class="card page-enter">
+    <h1 class="mb-1 flex items-center gap-2 text-xl font-semibold text-gray-900">
+        {% icon 'check-circle' 'h-6 w-6 text-emerald-600' %}
+        Account Created
+    </h1>
+    <p class="mb-4 text-sm text-gray-500">{{ profile }} was created as {{ role_label }}.</p>
+
+    <p class="mb-4 flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2.5 text-sm text-yellow-800">
+        {% icon 'warning' 'h-4 w-4 shrink-0' %}
+        This temporary password is shown only once. Copy it now and share it securely &mdash; the new user
+        will be asked to set their own password on first login.
+    </p>
+
+    <label class="field-label">Username</label>
+    <input type="text" class="input-field mb-4" value="{{ profile.user.username }}" readonly>
+
+    <label class="field-label">Temporary Password</label>
+    <div class="mb-6 flex items-center gap-2">
+        <input type="text" id="tempPassword" class="input-field font-mono" value="{{ temp_password }}" readonly>
+        <button type="button" id="copyBtn" class="btn-secondary btn-sm shrink-0">Copy</button>
+    </div>
+
+    <div class="flex flex-wrap gap-3 border-t border-gray-100 pt-5">
+        <a href="{% url 'accounts:people' %}" class="btn-primary">Back to People</a>
+    </div>
+</div>
+</div>
+
+<script>
+    document.getElementById('copyBtn').addEventListener('click', function () {
+        var field = document.getElementById('tempPassword');
+        field.select();
+        navigator.clipboard.writeText(field.value).then(function () {
+            var btn = document.getElementById('copyBtn');
+            var original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(function () { btn.textContent = original; }, 1500);
+        });
+    });
+</script>
+{% endblock %}

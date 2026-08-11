@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<h1 class="mb-6 text-2xl font-semibold text-gray-900">{{ title }}</h1>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-2">
+    <h1 class="text-2xl font-semibold text-gray-900">{{ title }}</h1>
+    {% include 'common/_export_buttons.html' with pdf_url=pdf_url %}
+</div>
 
 <div class="card page-enter">
     {% include 'timetable/_grid.html' with grid=grid editable=False %}

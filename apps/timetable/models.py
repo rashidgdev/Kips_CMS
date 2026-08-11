@@ -5,6 +5,11 @@ from apps.academics.models import CourseOffering
 from apps.common.models import TimeStampedModel
 
 
+def _fmt12(value):
+    """Render a time value in 12-hour clock form, e.g. '8:30 AM'."""
+    return value.strftime('%I:%M %p').lstrip('0')
+
+
 class TimeSlot(TimeStampedModel):
     class DayOfWeek(models.IntegerChoices):
         MONDAY = 1, 'Monday'
@@ -24,8 +29,16 @@ class TimeSlot(TimeStampedModel):
         unique_together = ('day_of_week', 'start_time', 'end_time')
 
     def __str__(self):
-        name = self.label or f'{self.start_time:%H:%M}-{self.end_time:%H:%M}'
+        name = self.label or f'{_fmt12(self.start_time)}-{_fmt12(self.end_time)}'
         return f'{self.get_day_of_week_display()} {name}'
+
+    @property
+    def start_time_display(self):
+        return _fmt12(self.start_time)
+
+    @property
+    def end_time_display(self):
+        return _fmt12(self.end_time)
 
 
 class Room(TimeStampedModel):

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Enroll Students &mdash; by Student{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Enroll Students &mdash; by Student</h1>
+<p class="mb-6 text-sm text-gray-500">Pick a student, then check off every course offering they should be enrolled in and submit once.</p>
+
+<div class="card page-enter mb-6 max-w-2xl">
+    <form method="get" class="flex flex-wrap items-end gap-3">
+        <div class="flex-1">
+            <label for="student-select" class="field-label">Student</label>
+            <select id="student-select" name="student" class="input-field" onchange="this.form.submit()">
+                <option value="">-- Select a student --</option>
+                {% for s in students %}
+                <option value="{{ s.pk }}" {% if selected_student.pk == s.pk %}selected{% endif %}>
+                    {{ s.roll_number }} - {{ s.user.get_full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn-secondary">Load Courses</button>
+    </form>
+</div>
+
+{% if selected_student %}
+<div class="card page-enter">
+    <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Course Offerings for {{ selected_student.program }}</h2>
+        <span class="text-sm text-gray-500">{{ already_enrolled_ids|length }} already enrolled</span>
+    </div>
+    {% if offerings %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="student" value="{{ selected_student.pk }}">
+        <div class="table-wrap mb-4">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th class="w-10"><input type="checkbox" id="checkAll" class="checkbox-field"></th>
+                    <th>Offering</th><th>Semester</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for o in offerings %}
+                <tr>
+                    <td>
+                        {% if o.pk not in already_enrolled_ids %}
+                        <input type="checkbox" class="offering-check checkbox-field" name="offering_ids" value="{{ o.pk }}">
+                        {% endif %}
+                    </td>
+                    <td class="font-medium text-gray-900">{{ o.course }}</td>
+                    <td>{{ o.semester }}</td>
+                    <td>
+                        {% if o.pk in already_enrolled_ids %}
+                            <span class="badge-green">Enrolled</span>
+                        {% else %}
+                            <span class="badge-gray">Not enrolled</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <button type="submit" class="btn-primary">
+            {% icon 'check-circle' 'h-4 w-4' %}
+            Enroll in Selected Courses
+        </button>
+    </form>
+    <script>
+        document.getElementById('checkAll').addEventListener('change', function () {
+            document.querySelectorAll('.offering-check').forEach(function (cb) { cb.checked = this.checked; }, this);
+        });
+    </script>
+    {% else %}
+    <p class="text-sm text-gray-500">No active course offerings found for this student's program.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

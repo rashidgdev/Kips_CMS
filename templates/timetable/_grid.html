@@ -15,7 +15,7 @@
         <tr>
             <td class="whitespace-nowrap rounded-lg bg-gray-50 px-3 py-2 align-top text-xs font-medium text-gray-500">
                 {{ row.period.label }}<br>
-                {{ row.period.start_time|time:"H:i" }}-{{ row.period.end_time|time:"H:i" }}
+                {{ row.period.start_time|time:"g:i A" }}-{{ row.period.end_time|time:"g:i A" }}
             </td>
             {% for cell in row.cells %}
             <td class="min-w-[9rem] align-top">

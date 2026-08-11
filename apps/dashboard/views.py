@@ -127,6 +127,8 @@ def admin_portal(request):
         'courses_url': reverse('academics:courses'),
         'offerings_url': reverse('academics:offerings'),
         'enrollments_url': reverse('academics:enrollments'),
+        'enroll_by_offering_url': reverse('academics:enroll-by-offering'),
+        'enroll_by_student_url': reverse('academics:enroll-by-student'),
         'rooms_url': reverse('timetable:rooms'),
         'timeslots_url': reverse('timetable:timeslots'),
         'assessment_categories_url': reverse('assessments:categories'),

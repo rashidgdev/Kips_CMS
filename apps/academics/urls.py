@@ -29,4 +29,7 @@ urlpatterns = [
     path('enrollments/new/', views.EnrollmentCreateView.as_view(), name='enrollment-new'),
     path('enrollments/<int:pk>/edit/', views.EnrollmentUpdateView.as_view(), name='enrollment-edit'),
     path('enrollments/<int:pk>/delete/', views.EnrollmentDeleteView.as_view(), name='enrollment-delete'),
+
+    path('enrollments/by-offering/', views.enroll_by_offering, name='enroll-by-offering'),
+    path('enrollments/by-student/', views.enroll_by_student, name='enroll-by-student'),
 ]

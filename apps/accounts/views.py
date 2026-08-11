@@ -113,18 +113,21 @@ def toggle_active(request, user_id):
 
 # --- Add person ------------------------------------------------------------
 
+def _person_created_response(request, profile, temp_password):
+    return render(request, 'accounts/person_created.html', {
+        'profile': profile,
+        'temp_password': temp_password,
+        'role_label': profile.user.get_role_display(),
+    })
+
+
 @role_required(*STAFF_MANAGEMENT_ROLES)
 def student_create(request):
     if request.method == 'POST':
         form = StudentCreateForm(request.POST)
         if form.is_valid():
             profile, temp_password = form.save()
-            messages.success(
-                request,
-                f'Student {profile} created. Temporary password: {temp_password} '
-                '(share this securely - it will not be shown again).',
-            )
-            return redirect('accounts:people')
+            return _person_created_response(request, profile, temp_password)
     else:
         form = StudentCreateForm()
     return render(request, 'common/generic_form.html', {'form': form, 'page_title': 'Add Student', 'cancel_url': reverse('accounts:people')})
@@ -136,12 +139,7 @@ def teacher_create(request):
         form = TeacherCreateForm(request.POST)
         if form.is_valid():
             profile, temp_password = form.save()
-            messages.success(
-                request,
-                f'{profile} created. Temporary password: {temp_password} '
-                '(share this securely - it will not be shown again).',
-            )
-            return redirect('accounts:people')
+            return _person_created_response(request, profile, temp_password)
     else:
         form = TeacherCreateForm()
     return render(request, 'common/generic_form.html', {'form': form, 'page_title': 'Add Teacher / HOD', 'cancel_url': reverse('accounts:people')})
@@ -153,12 +151,7 @@ def staff_create(request):
         form = StaffCreateForm(request.POST)
         if form.is_valid():
             profile, temp_password = form.save()
-            messages.success(
-                request,
-                f'{profile} created. Temporary password: {temp_password} '
-                '(share this securely - it will not be shown again).',
-            )
-            return redirect('accounts:people')
+            return _person_created_response(request, profile, temp_password)
     else:
         form = StaffCreateForm()
     return render(request, 'common/generic_form.html', {'form': form, 'page_title': 'Add Staff', 'cancel_url': reverse('accounts:people')})

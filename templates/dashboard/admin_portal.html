@@ -21,6 +21,8 @@
     {% include 'common/_portal_card.html' with url=courses_url|default:'' icon='academic-cap' title='Courses' description='The course catalog for each program.' color='bg-blue-50 text-blue-700' %}
     {% include 'common/_portal_card.html' with url=offerings_url|default:'' icon='clipboard-list' title='Faculty Assignments' description='Assign a course + section to a teacher for a semester.' color='bg-emerald-50 text-emerald-700' %}
     {% include 'common/_portal_card.html' with url=enrollments_url|default:'' icon='users' title='Enrollments' description='Enroll or drop a student from a course offering.' color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_portal_card.html' with url=enroll_by_offering_url|default:'' icon='user-plus' title='Bulk Enroll by Course' description='Enroll a whole class into one course offering at once.' color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_portal_card.html' with url=enroll_by_student_url|default:'' icon='user-plus' title='Bulk Enroll by Student' description="Enroll one student into their full course load at once." color='bg-emerald-50 text-emerald-700' %}
 </div>
 
 <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-400">Timetable Setup</h2>
