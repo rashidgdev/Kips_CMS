@@ -42,8 +42,10 @@ class TimeSlotForm(TailwindFormMixin, forms.ModelForm):
 
 
 class TimeSlotGeneratorForm(TailwindFormMixin, forms.Form):
-    """Generates a full day's worth of back-to-back lecture time slots
-    instead of adding each one by hand."""
+    """Generates a full day's worth of lecture time slots instead of adding
+    each one by hand. Lecture length is not entered directly - it's computed
+    by evenly dividing the working day span (minus any breaks) across the
+    requested number of lectures."""
 
     days = forms.MultipleChoiceField(
         choices=TimeSlot.DayOfWeek.choices,
@@ -53,7 +55,6 @@ class TimeSlotGeneratorForm(TailwindFormMixin, forms.Form):
     )
     day_start_time = forms.TimeField(label='Start of working day', widget=forms.TimeInput(attrs={'type': 'time'}))
     day_end_time = forms.TimeField(label='End of working day', widget=forms.TimeInput(attrs={'type': 'time'}))
-    lecture_duration_minutes = forms.IntegerField(label='Length of each lecture (minutes)', min_value=5, initial=50)
     number_of_lectures = forms.IntegerField(label='Number of lectures per day', min_value=1, initial=6)
     break_minutes = forms.IntegerField(
         label='Break between lectures (minutes)', min_value=0, initial=0, required=False,
@@ -68,24 +69,26 @@ class TimeSlotGeneratorForm(TailwindFormMixin, forms.Form):
         cleaned = super().clean()
         start = cleaned.get('day_start_time')
         end = cleaned.get('day_end_time')
-        duration = cleaned.get('lecture_duration_minutes')
         count = cleaned.get('number_of_lectures')
         break_minutes = cleaned.get('break_minutes') or 0
 
-        if start and end and duration and count:
+        if start and end and count:
             if end <= start:
                 raise forms.ValidationError('End of working day must be after the start of the working day.')
 
-            total_minutes = duration * count + break_minutes * (count - 1)
-            last_end = (
-                datetime.datetime.combine(datetime.date.today(), start) + datetime.timedelta(minutes=total_minutes)
-            ).time()
-            if last_end > end:
+            span_minutes = (
+                datetime.datetime.combine(datetime.date.today(), end)
+                - datetime.datetime.combine(datetime.date.today(), start)
+            ).total_seconds() / 60
+            break_total = break_minutes * (count - 1)
+            available_minutes = span_minutes - break_total
+
+            lecture_duration_minutes = int(available_minutes // count)
+            if lecture_duration_minutes < 5:
                 raise forms.ValidationError(
-                    f'{count} lectures of {duration} min (plus {break_minutes} min breaks) starting at '
-                    f'{start.strftime("%I:%M %p").lstrip("0")} would end at '
-                    f'{last_end.strftime("%I:%M %p").lstrip("0")}, which is after the working day ends at '
-                    f'{end.strftime("%I:%M %p").lstrip("0")}. Reduce the number of lectures, shorten the lecture '
-                    'or break length, or extend the working day.'
+                    f'Splitting {start.strftime("%I:%M %p").lstrip("0")}-{end.strftime("%I:%M %p").lstrip("0")} '
+                    f'into {count} lectures with {break_minutes} min breaks between them leaves less than 5 '
+                    'minutes per lecture. Reduce the number of lectures or breaks, or extend the working day.'
                 )
+            cleaned['lecture_duration_minutes'] = lecture_duration_minutes
         return cleaned

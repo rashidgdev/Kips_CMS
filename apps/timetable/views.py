@@ -124,7 +124,11 @@ def timeslot_generate(request):
                 break_minutes=data['break_minutes'],
             )
             if created:
-                messages.success(request, f'{len(created)} time slot(s) created.')
+                messages.success(
+                    request,
+                    f'{len(created)} time slot(s) created - each lecture is '
+                    f'{data["lecture_duration_minutes"]} minutes long.',
+                )
             if skipped:
                 messages.info(request, f'{len(skipped)} time slot(s) already existed and were left as-is.')
             if not created and not skipped:

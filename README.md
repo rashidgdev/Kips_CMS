@@ -328,17 +328,20 @@ overdue) at once.
 
 - Adding every period one at a time was tedious, so `/timetable/timeslots/generate/`
   ("Generate Time Slots" button on the Time Slots list) builds a whole day's
-  periods from four inputs: start of the working day, end of the working
-  day, length of each lecture, and number of lectures per day (plus an
-  optional break-between-lectures field, default 0 for back-to-back
-  periods) - applied to every selected working day at once.
-  `apps/timetable/services.py::generate_time_slots()` walks forward from the
-  start time, period by period, labeling them "Period 1", "Period 2", etc.
-- Validated against the working-day end time before anything is created:
-  if the requested lecture count/length/breaks would run past the end of
-  the working day, the form rejects it with a specific message (e.g. which
-  time it would actually end at) instead of silently creating an
-  out-of-hours period.
+  periods from three inputs: start of the working day, end of the working
+  day, and number of lectures per day (plus an optional
+  break-between-lectures field, default 0 for back-to-back periods) -
+  applied to every selected working day at once. Lecture length is **not**
+  entered directly - `TimeSlotGeneratorForm.clean()` computes it by
+  dividing the working day span (minus any breaks) evenly across the
+  requested number of lectures, e.g. an 08:00-14:00 day with 6 lectures
+  and no breaks becomes six 1-hour periods automatically.
+  `apps/timetable/services.py::generate_time_slots()` then walks forward
+  from the start time placing each period, labeling them "Period 1",
+  "Period 2", etc.
+- Validated before anything is created: if the requested lecture count and
+  breaks would leave less than 5 minutes per lecture, the form rejects it
+  with a specific message instead of creating unreasonably short periods.
 - **Safe to re-run**: each period is created via `get_or_create()` on
   `(day_of_week, start_time, end_time)`, so generating again (e.g. after
   deciding to add Sunday, or after editing one period by hand) only adds
