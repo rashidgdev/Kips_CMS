@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Student Progress Reports{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Student Progress Reports</h1>
+<p class="mb-6 text-sm text-gray-500">Pick a student to view or download their result card.</p>
+
+<form method="get" class="card mb-6 flex items-end gap-2">
+    <div class="flex-1">
+        <label for="q" class="field-label">Search</label>
+        <input type="text" id="q" name="q" value="{{ query }}" placeholder="Roll number or name..." class="input-field">
+    </div>
+    <button type="submit" class="btn-secondary">
+        {% icon 'search' 'h-4 w-4' %}
+        Search
+    </button>
+</form>
+
+<div class="card page-enter">
+    {% if students %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Roll No.</th>
+                    <th>Student</th>
+                    <th>Program</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>
+                        {% if student.user.photo %}
+                            <img src="{{ student.user.photo.url }}" alt="" class="h-8 w-8 rounded-full object-cover">
+                        {% else %}
+                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
+                                {{ student.user.first_name|slice:":1"|upper }}{{ student.user.last_name|slice:":1"|upper }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>{{ student.roll_number }}</td>
+                    <td class="font-medium text-gray-900">{{ student.user.get_full_name }}</td>
+                    <td>{{ student.program.code|default:'-' }}</td>
+                    <td><a href="{% url 'reports:progress' student.pk %}" class="link">View Report</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No students found.</p>
+    {% endif %}
+</div>
+{% endblock %}

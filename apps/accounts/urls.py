@@ -16,6 +16,7 @@ urlpatterns = [
     ),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('password/change/', views.ChangePasswordView.as_view(), name='password-change'),
+    path('profile/', views.profile, name='profile'),
     path('departments/', views.DepartmentListView.as_view(), name='departments'),
     path('departments/new/', views.DepartmentCreateView.as_view(), name='department-new'),
     path('departments/<int:pk>/edit/', views.DepartmentUpdateView.as_view(), name='department-edit'),

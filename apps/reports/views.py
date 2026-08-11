@@ -1,13 +1,17 @@
-from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from apps.academics.models import CourseOffering, Semester
-from apps.accounts.models import Roles
+from apps.accounts.models import Roles, StudentProfile
 from apps.common.exports import export_excel, export_pdf
 from apps.common.middleware import get_profile
 from apps.common.permissions import role_required
 
-from .services import get_academic_report, get_attendance_report, get_merit_list
+from .progress_pdf import render_progress_report_pdf
+from .services import get_academic_report, get_attendance_report, get_merit_list, get_student_progress_report
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN, Roles.TEACHER, Roles.HOD)
 
@@ -193,3 +197,61 @@ def merit_list_pdf(request):
     semester = get_object_or_404(Semester, pk=request.GET.get('semester'))
     rows = get_merit_list(semester)
     return export_pdf(f'merit_list_{semester}', 'Semester Merit List', MERIT_HEADERS, _merit_export_rows(rows), subtitle=str(semester))
+
+
+# --- Student progress report (result card) ----------------------------------
+
+@role_required(*STAFF_ROLES)
+def progress_students(request):
+    """Staff-facing search/list of students, to open one's progress report."""
+    query = request.GET.get('q', '').strip()
+    students = StudentProfile.objects.select_related('user', 'program').order_by('roll_number')
+    if query:
+        students = students.filter(
+            Q(roll_number__icontains=query)
+            | Q(user__first_name__icontains=query)
+            | Q(user__last_name__icontains=query)
+            | Q(user__username__icontains=query)
+        )
+    return render(request, 'reports/progress_students.html', {'students': students, 'query': query})
+
+
+def _progress_report_student(request, student_id):
+    """Students may only open their own report; staff may open any student's."""
+    student = get_object_or_404(StudentProfile.objects.select_related('user', 'program'), pk=student_id)
+    profile = get_profile(request)
+    is_owner = request.role == Roles.STUDENT and profile is not None and profile.pk == student.pk
+    is_staff = request.role in STAFF_ROLES
+    if not (is_owner or is_staff):
+        raise PermissionDenied
+    return student
+
+
+@login_required
+def progress_report(request, student_id):
+    student = _progress_report_student(request, student_id)
+    semesters = Semester.objects.filter(program=student.program).order_by('-number')
+    semester_id = request.GET.get('semester') or student.current_semester_id or (
+        semesters.first().pk if semesters.exists() else None
+    )
+    semester = get_object_or_404(Semester, pk=semester_id) if semester_id else None
+    report = get_student_progress_report(student, semester) if semester else None
+    return render(
+        request,
+        'reports/progress_report.html',
+        {'student': student, 'semesters': semesters, 'semester': semester, 'report': report},
+    )
+
+
+@login_required
+def progress_report_pdf(request, student_id):
+    student = _progress_report_student(request, student_id)
+    semester = get_object_or_404(Semester, pk=request.GET.get('semester'))
+    report = get_student_progress_report(student, semester)
+    return render_progress_report_pdf(report)
+
+
+@role_required(Roles.STUDENT)
+def my_progress_report(request):
+    profile = get_profile(request)
+    return redirect('reports:progress', student_id=profile.pk)

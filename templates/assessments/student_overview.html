@@ -2,7 +2,13 @@
 {% load icons %}
 {% block title %}My Grades{% endblock %}
 {% block content %}
-<h1 class="mb-6 text-2xl font-semibold text-gray-900">My Grades</h1>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <h1 class="text-2xl font-semibold text-gray-900">My Grades</h1>
+    <a href="{% url 'reports:my-progress' %}" class="btn-secondary">
+        {% icon 'download' 'h-4 w-4' %}
+        My Progress Report
+    </a>
+</div>
 
 <div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-2">
     {% include 'common/_stat_tile.html' with icon='trending-up' label='Current Semester GPA' value=current_semester_gpa.gpa|default:"-" color='bg-blue-50 text-blue-700' %}

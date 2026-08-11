@@ -2,6 +2,7 @@ import csv
 import io
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import PasswordChangeView
 from django.http import HttpResponse
@@ -15,6 +16,7 @@ from . import imports as bulk_imports
 from .forms import (
     DepartmentForm,
     ImportUploadForm,
+    ProfilePhotoForm,
     StaffCreateForm,
     StaffProfileEditForm,
     StudentCreateForm,
@@ -42,6 +44,21 @@ class ChangePasswordView(LoginRequiredMixin, PasswordChangeView):
             self.request.user.save(update_fields=['must_change_password'])
         messages.success(self.request, 'Your password has been changed.')
         return response
+
+
+# --- My profile (photo) -------------------------------------------------
+
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        form = ProfilePhotoForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile photo updated.')
+            return redirect('accounts:profile')
+    else:
+        form = ProfilePhotoForm(instance=request.user)
+    return render(request, 'accounts/profile.html', {'form': form})
 
 
 # --- Departments -------------------------------------------------------
@@ -124,7 +141,7 @@ def _person_created_response(request, profile, temp_password):
 @role_required(*STAFF_MANAGEMENT_ROLES)
 def student_create(request):
     if request.method == 'POST':
-        form = StudentCreateForm(request.POST)
+        form = StudentCreateForm(request.POST, request.FILES)
         if form.is_valid():
             profile, temp_password = form.save()
             return _person_created_response(request, profile, temp_password)
@@ -136,7 +153,7 @@ def student_create(request):
 @role_required(*STAFF_MANAGEMENT_ROLES)
 def teacher_create(request):
     if request.method == 'POST':
-        form = TeacherCreateForm(request.POST)
+        form = TeacherCreateForm(request.POST, request.FILES)
         if form.is_valid():
             profile, temp_password = form.save()
             return _person_created_response(request, profile, temp_password)
@@ -148,7 +165,7 @@ def teacher_create(request):
 @role_required(Roles.ADMIN)
 def staff_create(request):
     if request.method == 'POST':
-        form = StaffCreateForm(request.POST)
+        form = StaffCreateForm(request.POST, request.FILES)
         if form.is_valid():
             profile, temp_password = form.save()
             return _person_created_response(request, profile, temp_password)

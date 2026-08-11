@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Progress Report{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div class="flex items-center gap-4">
+        {% if student.user.photo %}
+            <img src="{{ student.user.photo.url }}" alt="{{ student.user.get_full_name }}" class="h-16 w-16 rounded-full object-cover ring-2 ring-gray-100">
+        {% else %}
+            <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-xl font-semibold text-white">
+                {{ student.user.first_name|slice:":1"|upper }}{{ student.user.last_name|slice:":1"|upper }}
+            </span>
+        {% endif %}
+        <div>
+            <h1 class="text-2xl font-semibold text-gray-900">{{ student.user.get_full_name }}</h1>
+            <p class="text-sm text-gray-500">{{ student.roll_number }} &middot; {{ student.program.name|default:'-' }}</p>
+        </div>
+    </div>
+    {% if role != 'student' %}
+        <a href="{% url 'reports:progress-students' %}" class="text-sm font-medium text-gray-500 hover:text-gray-800">&larr; Back to students</a>
+    {% endif %}
+</div>
+
+<form method="get" class="card mb-6 flex items-end gap-2">
+    <div>
+        <label for="semester" class="field-label">Semester</label>
+        <select id="semester" name="semester" class="input-field">
+            {% for s in semesters %}
+                <option value="{{ s.pk }}" {% if semester and s.pk == semester.pk %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn-secondary">View</button>
+    {% if semester %}
+        <a href="{% url 'reports:progress-pdf' student.pk %}?semester={{ semester.pk }}" class="btn-primary" target="_blank">
+            {% icon 'download' 'h-4 w-4' %}
+            Download PDF
+        </a>
+    {% endif %}
+</form>
+
+{% if not semesters %}
+    <div class="card page-enter"><p class="text-sm text-gray-500">This student has no semesters set up for their program yet.</p></div>
+{% elif report %}
+<div class="stagger grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {% include 'common/_stat_tile.html' with icon='clipboard-list' color='bg-blue-50 text-blue-700' label='Attendance' value=report.attendance_overall.percentage|default:'-' %}
+    {% include 'common/_stat_tile.html' with icon='trending-up' color='bg-emerald-50 text-emerald-700' label='Semester GPA' value=report.semester_gpa.gpa|default:'-' %}
+    {% include 'common/_stat_tile.html' with icon='book-open' color='bg-indigo-50 text-indigo-700' label='Enrolled Courses' value=report.course_rows|length %}
+</div>
+
+<div class="card page-enter mt-6">
+    <h2 class="mb-4 font-semibold text-gray-900">Assessment Performance</h2>
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Obtained</th>
+                <th>Possible</th>
+                <th>Percentage</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.category_breakdown %}
+            <tr>
+                <td class="font-medium text-gray-900">{{ row.name }}</td>
+                <td>{{ row.obtained }}</td>
+                <td>{{ row.possible }}</td>
+                <td>{{ row.percentage|default:"-" }}{% if row.percentage is not None %}%{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<div class="card page-enter mt-6">
+    <h2 class="mb-4 font-semibold text-gray-900">Course-wise Result</h2>
+    {% if report.course_rows %}
+    <div class="table-wrap">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Attendance</th>
+                <th>Obtained</th>
+                <th>Possible</th>
+                <th>Grade</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.course_rows %}
+            <tr>
+                <td class="font-medium text-gray-900">{{ row.offering.course.code }} - {{ row.offering.course.title }}</td>
+                <td>{% if row.attendance.percentage is not None %}{{ row.attendance.percentage }}%{% else %}-{% endif %}</td>
+                <td>{{ row.result.total_obtained|default:"-" }}</td>
+                <td>{{ row.result.total_possible|default:"-" }}</td>
+                <td>{% if row.result.grade_letter %}<span class="badge-blue">{{ row.result.grade_letter }}</span>{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No enrolled courses this semester.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

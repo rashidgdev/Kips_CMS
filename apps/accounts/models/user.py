@@ -16,6 +16,7 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=20, blank=True)
     must_change_password = models.BooleanField(default=False)
     email = models.EmailField(unique=True)
+    photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
 
     def __str__(self):
         return f'{self.get_full_name() or self.username} ({self.get_role_display()})'

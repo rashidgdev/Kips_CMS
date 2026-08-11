@@ -213,6 +213,18 @@ overdue) at once.
   page any time via the account menu in the top nav to change their password
   voluntarily, not just when forced.
 
+### Profile photos
+
+- Every `User` (any role) has an optional `photo` `ImageField`. Users upload
+  their own photo any time from `/accounts/profile/` (the account menu in the
+  top nav); a Coordinator/Admin can also set it at creation time on the Add
+  Student/Teacher/Staff forms.
+- The photo appears in the top nav avatar, the people directory, the
+  student-progress-report screen, and on the downloadable result card PDF
+  (see Module 7). In dev, uploaded files are served from `MEDIA_ROOT` via
+  `config/urls.py`'s `static()` helper (only active when `DEBUG=True` -
+  production serves `/media/` some other way, e.g. Nginx/S3).
+
 ## Attendance (Module 2)
 
 - `apps/attendance/models.py`: `LectureSession` (one per lecture actually
@@ -402,6 +414,28 @@ overdue) at once.
   HTML view - confirmed a teacher gets 404 on another teacher's course
   even via the direct export URL); Coordinator/Admin can report on any
   course; the Merit List is Coordinator/Admin only.
+
+### Student Progress Reports (result cards)
+
+- `/reports/progress/students/` (Teacher/HOD/Coordinator/Admin): search any
+  student by roll number or name, then open their **result card** -
+  combining attendance %, a breakdown by assessment category
+  (Quiz/Assignment/Presentation/Midterm/Final), per-course results, and
+  Semester GPA in one screen, with the student's photo shown alongside.
+  `apps/reports/services.py::get_student_progress_report()` computes this by
+  reusing the same attendance/assessment data every other page already
+  shows - no separate aggregate table to keep in sync.
+- **Downloadable PDF** (`apps/reports/progress_pdf.py`, reportlab
+  canvas-drawn, not the generic tabular exporter - this one has a header,
+  the student's photo, and multiple sections on one page): the result card
+  a student or teacher can save/print, matching the "photo + attendance +
+  category-wise marks, downloadable" requirement.
+- **Self-service**: a student reaches their own result card from "My
+  Grades" -> "My Progress Report" (`/reports/progress/my/`), which resolves
+  to their own profile - no way to view or download anyone else's.
+- **Ownership enforced on the PDF endpoint itself**, exactly like the fee
+  challan PDF: a student gets 403 on another student's report even via the
+  direct PDF URL; Teacher/HOD/Coordinator/Admin can open any student's.
 - **Dashboards enriched with live cross-module stats**: the student
   dashboard now shows CGPA, current-semester GPA, and overall attendance %
   (pulled from the Assessments and Attendance services); the teacher

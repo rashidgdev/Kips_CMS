@@ -17,6 +17,12 @@ class StyledPasswordChangeForm(TailwindFormMixin, PasswordChangeForm):
     pass
 
 
+class ProfilePhotoForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['photo']
+
+
 class ImportUploadForm(TailwindFormMixin, forms.Form):
     file = forms.FileField(label='Excel file (.xlsx)')
 
@@ -51,8 +57,9 @@ class _PersonCreateFormBase(TailwindFormMixin, forms.Form):
     last_name = forms.CharField(max_length=150)
     email = forms.EmailField()
     phone_number = forms.CharField(max_length=20, required=False)
+    photo = forms.ImageField(required=False, help_text='Optional - can also be added later by the user themselves.')
 
-    field_order = ['username', 'first_name', 'last_name', 'email', 'phone_number']
+    field_order = ['username', 'first_name', 'last_name', 'email', 'phone_number', 'photo']
 
     def clean_username(self):
         username = self.cleaned_data['username']
@@ -81,6 +88,7 @@ class _PersonCreateFormBase(TailwindFormMixin, forms.Form):
             is_superuser=is_superuser,
             must_change_password=True,
             password=temp_password,
+            photo=self.cleaned_data.get('photo') or None,
         )
         return user, temp_password
 
