@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static icons %}
+{% block title %}Delete{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900" id="crud-delete-title">Delete?</h1>
+
+<div class="card page-enter max-w-lg">
+    <p class="mb-5 flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2.5 text-sm text-yellow-800">
+        {% icon 'warning' 'h-5 w-5 shrink-0' %}
+        This action cannot be undone.
+    </p>
+    <form id="crud-delete-form">
+        <div class="flex items-center gap-3">
+            <button type="submit" class="btn-danger">Delete</button>
+            <a href="{{ cancel_url }}" class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/core/crud.js' %}"></script>
+<script>
+    KipsCrud.renderDeleteConfirm({{ crud_config|safe }});
+</script>
+{% endblock %}

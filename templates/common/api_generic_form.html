@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-semibold text-gray-900">{{ page_title }}</h1>
+
+<div class="card page-enter max-w-lg" id="crud-form-root"></div>
+
+<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/core/crud.js' %}"></script>
+<script>
+    KipsCrud.renderForm({{ crud_config|safe }});
+</script>
+{% endblock %}

@@ -34,6 +34,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     'tailwind',
     'theme',
+    'rest_framework',
 ]
 
 LOCAL_APPS = [
@@ -151,3 +152,28 @@ NPM_BIN_PATH = env('NPM_BIN_PATH', default='npm.cmd')
 # Attendance
 
 ATTENDANCE_SHORTAGE_THRESHOLD = env.int('ATTENDANCE_SHORTAGE_THRESHOLD', default=75)
+
+
+# Django REST Framework
+#
+# Templates are being migrated to fetch their data from these APIs via JS
+# instead of receiving it through the Django view's template context (see
+# apps/common/api_permissions.py and apps/common/api_generic.py). Auth reuses
+# the same session cookie the HTML site already logs in with - no separate
+# API login exists yet. JSON-only rendering (no browsable API) keeps this
+# consistent with the fact that these endpoints are gated by the same
+# role-based rules as the HTML views, not meant as a public/explorable API.
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'apps.common.api_metadata.StandardPagination',
+    'PAGE_SIZE': 50,  # matches apps/common/crud.py CrudListView.paginate_by
+    'DEFAULT_METADATA_CLASS': 'apps.common.api_metadata.ChoiceMetadata',
+}

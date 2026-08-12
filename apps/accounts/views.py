@@ -5,16 +5,16 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import PasswordChangeView
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 
-from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudUpdateView
+from apps.common.api_crud_views import ApiCrudDeleteView, ApiCrudFormView, ApiCrudListView
 from apps.common.permissions import role_required
 
 from . import imports as bulk_imports
 from .forms import (
-    DepartmentForm,
     ImportUploadForm,
     ProfilePhotoForm,
     StaffCreateForm,
@@ -61,41 +61,39 @@ def profile(request):
     return render(request, 'accounts/profile.html', {'form': form})
 
 
-# --- Departments -------------------------------------------------------
+# --- Departments (converted to the REST-API-driven CRUD pattern - see
+# apps/common/api_crud_views.py, apps/accounts/api_views.py::DepartmentViewSet,
+# static/js/core/crud.js) -----------------------------------------------
 
-class DepartmentListView(CrudListView):
-    model = Department
+class DepartmentListView(ApiCrudListView):
     allowed_roles = STAFF_MANAGEMENT_ROLES
     page_title = 'Departments'
-    list_display = [('code', 'Code'), ('name', 'Name'), ('hod', 'HOD')]
+    api_list_url_name = 'accounts_api:department-list'
+    columns = [('code', 'Code'), ('name', 'Name'), ('hod_label', 'HOD')]
     add_url_name = 'accounts:department-new'
     edit_url_name = 'accounts:department-edit'
     delete_url_name = 'accounts:department-delete'
+    created_message = 'Department created.'
+    updated_message = 'Department updated.'
+    deleted_message = 'Department deleted.'
 
 
-class DepartmentCreateView(CrudCreateView):
-    model = Department
-    form_class = DepartmentForm
+class DepartmentFormView(ApiCrudFormView):
+    """Serves both accounts:department-new (no pk) and accounts:department-edit (pk)."""
     allowed_roles = STAFF_MANAGEMENT_ROLES
-    page_title = 'Add Department'
-    success_url = reverse_lazy('accounts:departments')
-    success_message = 'Department created.'
+    create_page_title = 'Add Department'
+    edit_page_title = 'Edit Department'
+    api_list_url_name = 'accounts_api:department-list'
+    api_detail_url_name = 'accounts_api:department-detail'
+    list_url_name = 'accounts:departments'
 
 
-class DepartmentUpdateView(CrudUpdateView):
-    model = Department
-    form_class = DepartmentForm
+class DepartmentDeleteView(ApiCrudDeleteView):
     allowed_roles = STAFF_MANAGEMENT_ROLES
-    page_title = 'Edit Department'
-    success_url = reverse_lazy('accounts:departments')
-    success_message = 'Department updated.'
-
-
-class DepartmentDeleteView(CrudDeleteView):
-    model = Department
-    allowed_roles = STAFF_MANAGEMENT_ROLES
-    success_url = reverse_lazy('accounts:departments')
-    success_message = 'Department deleted.'
+    api_detail_url_name = 'accounts_api:department-detail'
+    list_url_name = 'accounts:departments'
+    title_fields = ('code', 'name')
+    title_separator = ' - '
 
 
 # --- People directory ----------------------------------------------------
@@ -103,15 +101,49 @@ class DepartmentDeleteView(CrudDeleteView):
 @role_required(*STAFF_MANAGEMENT_ROLES)
 def people_directory(request):
     role_filter = request.GET.get('role', '')
+    department_filter = request.GET.get('department', '')
+    query = request.GET.get('q', '').strip()
+
     users = User.objects.select_related(
-        'student_profile', 'teacher_profile', 'staff_profile'
+        'student_profile__program__department', 'teacher_profile__department', 'staff_profile'
     ).order_by('role', 'first_name')
+
     if role_filter:
         users = users.filter(role=role_filter)
+
+    if department_filter:
+        # A student's "department" is their program's department - StaffProfile
+        # has no department of its own (coordinator/accountant/admin are
+        # campus-wide, not tied to one).
+        users = users.filter(
+            Q(teacher_profile__department_id=department_filter)
+            | Q(student_profile__program__department_id=department_filter)
+        )
+
+    if query:
+        users = users.filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(username__icontains=query)
+            | Q(email__icontains=query)
+            | Q(student_profile__roll_number__icontains=query)
+            | Q(teacher_profile__employee_id__icontains=query)
+            | Q(staff_profile__employee_id__icontains=query)
+        )
+
+    users = users.distinct()
+
     return render(
         request,
         'accounts/people_directory.html',
-        {'users': users, 'roles': Roles.choices, 'role_filter': role_filter},
+        {
+            'users': users,
+            'roles': Roles.choices,
+            'role_filter': role_filter,
+            'departments': Department.objects.order_by('name'),
+            'department_filter': department_filter,
+            'query': query,
+        },
     )
 
 
