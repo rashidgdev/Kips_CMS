@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Generate Challan &mdash; {{ student }}{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Generate Challan</h1>
+<p class="mb-6 text-sm text-gray-500">{{ student.roll_number }} &mdash; {{ student.user.get_full_name }} &middot; {{ semester }}</p>
+
+{% if rows %}
+<div class="card page-enter">
+    <p class="mb-4 text-sm text-gray-500">
+        Select which fee categories to include and how much of each to charge on this challan.
+        Leave the amount at the full outstanding balance, or lower it to issue a partial /
+        installment challan - the remaining balance stays outstanding for a later challan.
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="table-wrap mb-4">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th class="w-10"><input type="checkbox" id="checkAll" class="checkbox-field"></th>
+                    <th>Category</th>
+                    <th>Outstanding</th>
+                    <th>Amount to Challan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>
+                        <input type="checkbox" class="item-check checkbox-field"
+                               name="include_{{ row.item.pk }}" id="include_{{ row.item.pk }}">
+                    </td>
+                    <td class="font-medium text-gray-900">
+                        <label for="include_{{ row.item.pk }}">{{ row.item.category }}</label>
+                    </td>
+                    <td>Rs. {{ row.outstanding }}</td>
+                    <td>
+                        <input type="number" step="0.01" min="0.01" max="{{ row.outstanding }}"
+                               name="amount_{{ row.item.pk }}" value="{{ row.outstanding }}"
+                               class="input-field w-32">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <button type="submit" class="btn-primary">
+            {% icon 'document-chart' 'h-4 w-4' %}
+            Generate Challan
+        </button>
+        <a href="{% url 'finance:student-detail' student.pk %}" class="ml-3 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">Cancel</a>
+    </form>
+    <script>
+        document.getElementById('checkAll').addEventListener('change', function () {
+            document.querySelectorAll('.item-check').forEach(function (cb) { cb.checked = this.checked; }, this);
+        });
+    </script>
+</div>
+{% else %}
+<div class="card page-enter">
+    <p class="text-sm text-gray-500">Nothing outstanding for {{ semester }} - no challan needed.</p>
+    <a href="{% url 'finance:student-detail' student.pk %}" class="link mt-3 inline-block">Back to student</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -51,6 +51,7 @@ day-to-day staff actions run through this portal rather than `/admin/`.
 ## Tech stack
 
 - Django 6 (Python 3.13+), Django templates (no separate frontend framework)
+- Django REST Framework for the REST API layer (see "REST API architecture" below)
 - SQLite for local development (swappable via `DATABASE_URL`)
 - Tailwind CSS via [django-tailwind](https://github.com/timonweb/django-tailwind),
   using its **standalone binary** mode - no Node.js/npm required
@@ -225,6 +226,66 @@ overdue) at once.
   `config/urls.py`'s `static()` helper (only active when `DEBUG=True` -
   production serves `/media/` some other way, e.g. Nginx/S3).
 
+## REST API architecture (in progress)
+
+The app is being converted, module by module, from "Django views pass data
+through template context" to "Django views render a page shell, and the
+page's own JS fetches its data from a REST API." The goal: the exact same
+UI, URLs, and permissions as before, but with a REST API underneath that a
+future mobile app can also consume - no duplicated business logic between
+the web UI and the API. **This conversion is not finished** - only the
+Department screens (`/accounts/departments/...`) are converted so far, as
+the proof-of-concept for the pattern; every other CRUD screen (Program,
+Semester, Course, Room, TimeSlot, AssessmentCategory, etc.) still works the
+old way (server-rendered context) and is unaffected until it's converted.
+
+**Shared infrastructure** (`apps/common/`):
+- `api_permissions.py` - `HasRole.for_roles(*roles)` mirrors `role_required`/
+  `RoleRequiredMixin` exactly (superuser always passes, else role must
+  match); `IsOwnerOrRoles` will back the "student owns this, or staff" checks
+  used by finance's challan PDF and reports' progress-report screens once
+  those modules are converted.
+- `api_metadata.py` - `StandardPagination` (matches `paginate_by = 50`) and
+  `ChoiceMetadata` (extends DRF's OPTIONS response to include
+  `{value, display_name}` choices for ForeignKey fields, not just
+  `ChoiceField` - lets the generic JS form builder render `<select>`
+  dropdowns for any FK without a bespoke "choices" endpoint per field). Kept
+  in its own module, separate from anything importing `rest_framework.
+  viewsets`, to avoid a circular import (DRF's `views.py` reads
+  `DEFAULT_METADATA_CLASS` at class-definition time).
+- `api_generic.py` - `RoleScopedModelViewSet`, a DRF `ModelViewSet` gated by
+  `HasRole`, mirroring `apps/common/crud.py`'s `CrudListView/Create/Update/
+  DeleteView` for simple "reference data" resources.
+- `api_crud_views.py` - thin Django **template** views (`ApiCrudListView`/
+  `ApiCrudFormView`/`ApiCrudDeleteView`) that keep the same
+  `RoleRequiredMixin` gate as before (so a logged-out or wrong-role visitor
+  is blocked before any JS runs) but render an empty shell template instead
+  of building context - the page's own JS fetches everything.
+
+**Frontend** (`static/js/core/`):
+- `api.js` - `KipsAPI.apiFetch(url, {method, body, params})`: attaches the
+  `X-CSRFToken` header from the `csrftoken` cookie on unsafe methods (same
+  CSRF enforcement `{% csrf_token %}` provided before), JSON in/out, throws
+  a typed `ApiError(status, data)` on failure.
+- `crud.js` - `KipsCrud.renderList/renderForm/renderDeleteConfirm`:
+  generic, config-driven renderers that reproduce
+  `templates/common/generic_list.html`/`generic_form.html`/
+  `generic_confirm_delete.html`'s exact markup from JSON instead of Django
+  template context. The create/edit form is built entirely from an
+  `OPTIONS` request against the resource's API (field type, required,
+  help text, FK choices) - a new CRUD resource doesn't need any bespoke
+  form-building JS, only a serializer and a small per-page config (API URLs,
+  column list) passed from its (still role-gated) Django view.
+
+**Example wiring** (`apps/accounts/`): `serializers.py::DepartmentSerializer` →
+`api_views.py::DepartmentViewSet(RoleScopedModelViewSet)` → `api_urls.py`
+(mounted at `/api/v1/accounts/departments/` from `config/urls.py`) →
+`views.py::DepartmentListView/FormView/DeleteView` (now `ApiCrudListView`/
+`ApiCrudFormView`/`ApiCrudDeleteView` subclasses instead of the old
+`apps/common/crud.py` ones) → `templates/common/api_generic_*.html` (new
+shell templates, separate from the original `generic_*.html`, which are
+untouched and still used by every not-yet-converted resource).
+
 ## Attendance (Module 2)
 
 - `apps/attendance/models.py`: `LectureSession` (one per lecture actually
@@ -320,6 +381,22 @@ overdue) at once.
   classes (by teaching assignment or enrollment respectively) - they share
   the same grid renderer as the coordinator's view via
   `templates/timetable/_grid.html`.
+- **Breaks are shown, not just implied**: `services.py::build_grid()` looks
+  for a genuine time gap between one period's end and the next period's
+  start (e.g. left by "Generate Time Slots" below) and inserts it into the
+  grid as its own row - a full-width amber "BREAK · 10:00 AM-10:15 AM
+  (15 min)" bar - instead of leaving an unlabeled blank space. Since the
+  grid's period list is a union of every day's periods (so a day with no
+  class in some period can still show an empty cell in the right row), a
+  gap longer than `MAX_BREAK_MINUTES` (120) is treated as two different
+  days' schedules simply not lining up rather than a real break, and isn't
+  shown - only plausible break lengths get labeled.
+- **PDF export renders the actual grid**, not a flat list of classes:
+  `apps/timetable/grid_pdf.py::render_timetable_grid_pdf()` builds a
+  reportlab table with explicit column widths sized to fill the full
+  landscape page (one column per day plus a time column), including the
+  same amber break rows as the on-screen grid - used by all three PDF
+  endpoints (semester grid, teacher's own, student's own).
 - Known v1 limitation (matches the earlier-agreed scope): only teacher and
   room conflicts are checked. A student having two different enrolled
   courses scheduled in the same slot is not yet flagged.
@@ -329,19 +406,26 @@ overdue) at once.
 - Adding every period one at a time was tedious, so `/timetable/timeslots/generate/`
   ("Generate Time Slots" button on the Time Slots list) builds a whole day's
   periods from three inputs: start of the working day, end of the working
-  day, and number of lectures per day (plus an optional
-  break-between-lectures field, default 0 for back-to-back periods) -
-  applied to every selected working day at once. Lecture length is **not**
-  entered directly - `TimeSlotGeneratorForm.clean()` computes it by
-  dividing the working day span (minus any breaks) evenly across the
-  requested number of lectures, e.g. an 08:00-14:00 day with 6 lectures
-  and no breaks becomes six 1-hour periods automatically.
-  `apps/timetable/services.py::generate_time_slots()` then walks forward
-  from the start time placing each period, labeling them "Period 1",
-  "Period 2", etc.
-- Validated before anything is created: if the requested lecture count and
-  breaks would leave less than 5 minutes per lecture, the form rejects it
-  with a specific message instead of creating unreasonably short periods.
+  day, and number of lectures per day - applied to every selected working
+  day at once. Lecture length is **not** entered directly -
+  `TimeSlotGeneratorForm.clean()` computes it by dividing the working day
+  span (minus any breaks) evenly across the requested number of lectures,
+  e.g. an 08:00-14:00 day with 6 lectures and no breaks becomes six 1-hour
+  periods automatically.
+- **Breaks don't have to fall after every lecture, and don't have to be the
+  same length**: up to 5 optional break rows, each independently saying
+  "after lecture N, break for X minutes" - e.g. a 15 min break after
+  lecture 2 and a separate 30 min lunch break after lecture 4, with every
+  other lecture back-to-back. `apps/timetable/services.py::generate_time_slots()`
+  walks forward from the start time placing each period, inserting whichever
+  break (if any) is configured for that lecture number, labeling periods
+  "Period 1", "Period 2", etc.
+- Validated before anything is created: a break row needs both its fields
+  filled in (or both left blank), can't target the same lecture twice, and
+  can't target the last lecture (nothing to delay into). If the requested
+  lecture count and total break time would leave less than 5 minutes per
+  lecture, the form rejects it with a specific message instead of creating
+  unreasonably short periods.
 - **Safe to re-run**: each period is created via `get_or_create()` on
   `(day_of_week, start_time, end_time)`, so generating again (e.g. after
   deciding to add Sunday, or after editing one period by hand) only adds
@@ -381,29 +465,56 @@ overdue) at once.
 
 ### Fee Challans
 
-- `apps/finance/models.py`: `Challan` (a formal payment voucher covering a
-  student's outstanding fee items for one semester) and `ChallanLine` (each
-  covered fee item, with its outstanding **amount frozen at issue time** -
-  so a reprinted challan always matches what was originally handed to the
-  student, even if fee items change later). `challan_number` is generated
-  once (`KIPS-{year}-{id:06d}`) and never changes.
-- **No accidental duplicates**: `services.generate_challan()` checks for an
-  already-active, unpaid challan for the same student+semester before
-  creating a new one - clicking "Generate Challan" twice reuses the
-  existing challan (same number, same amount) instead of issuing two live
-  vouchers for the same dues. To reissue with a fresh number (e.g. the
-  student lost it), cancel the old one first (`/finance/challans/<id>/cancel/`).
-- **Status, computed on read** (same pattern as everything else in this
-  module): a challan is "Paid" the moment every fee item it covers is
-  settled, however that happened - no separate payment-to-challan
-  bookkeeping required.
+- `apps/finance/models.py`: `Challan` (a formal payment voucher covering
+  some or all of a student's outstanding fee items for one semester) and
+  `ChallanLine` (one covered fee item, with an **amount frozen at issue
+  time** - not necessarily the item's full outstanding balance, see
+  Installments below - so a reprinted challan always matches what was
+  originally handed to the student). `challan_number` is generated once
+  (`KIPS-{year}-{id:06d}`) and never changes.
+- **Installments**: `/finance/students/<id>/generate-challan/` shows every
+  outstanding fee category with a checkbox and an editable amount (default:
+  the full outstanding balance). The accountant can select just one
+  category (e.g. Hostel Fee only, leaving Tuition for later), or lower the
+  amount on a selected category to issue a challan for part of it (e.g.
+  Rs. 20,000 of a Rs. 60,000 tuition balance) - `services.generate_challan()`
+  builds the challan from exactly that selection instead of always bundling
+  every category at its full balance. The remaining balance stays
+  outstanding and can be challaned separately later - the same fee item can
+  legitimately appear on several challans over time as installments are
+  paid off.
+- **Recording payment against a challan**: since a challan is normally paid
+  in one bank transaction, "Record Payment" on the challan detail page is a
+  single action (date + method) that creates one `Payment` per
+  `ChallanLine`, at that line's exact amount, linked back to the challan
+  (`Payment.challan` FK) - `services.record_challan_payment()`. Direct,
+  non-challan payments against a fee item are still possible too (the
+  original per-item "Record Payment" flow on the student's fee page is
+  unchanged) for categories paid without ever being challaned.
+- **Status, computed on read**: a challan is "Paid" once payments linked
+  directly to it (via `Payment.challan`) cover its own total - tracked
+  independently of the underlying fee item's overall balance, which is
+  what makes installments work correctly: a challan that only ever asked
+  for part of a fee item's balance shows "Paid" once *that part* is
+  settled, not stuck on "Unpaid" until the whole fee item is eventually
+  cleared by later installments. "Overdue" (red) is shown once the due
+  date has passed with nothing paid.
+- **No accidental duplicates**: resubmitting the exact same category+amount
+  selection reuses the existing unpaid challan instead of creating a
+  duplicate (guards against a double form submission) - but deliberately
+  does *not* block issuing a second, different-amount challan while an
+  earlier one is still unpaid, since that's the normal installment
+  workflow. To reissue a challan with a fresh number (e.g. the student lost
+  it), cancel the old one first (`/finance/challans/<id>/cancel/`).
 - **The PDF itself** (`apps/finance/challan_pdf.py`): a hand-built
   `reportlab` canvas layout (not the generic table exporter, since this is
   a formatted voucher, not a data export) - one A4 page split into three
   identical copies (**Bank / College / Student**), each with the KIPS
   logo, challan number, student/program/semester details, the fee
   breakdown table, total, and signature lines - matching the standard
-  paper challan format used by Pakistani educational institutions.
+  paper challan format used by Pakistani educational institutions. Prints
+  whatever amount the challan actually covers, so installment challans
+  render correctly with no changes needed.
 - **Access**: Accountant/Admin generate and manage challans from a
   student's fee detail page or the campus-wide `/finance/challans/` list;
   a student can view and download their own challans' PDFs from
@@ -501,6 +612,29 @@ one **Administration** hub (`/administration/`, role-scoped by section).
   in Phase 1), and Enrollments. Creating a Faculty Assignment auto-fills
   `assigned_by` with the logged-in coordinator, same as the old admin-only
   path did.
+- **A program can have more than one current semester at once**
+  (`Semester.is_current`) - e.g. Semester 3 and Semester 5 of the same
+  program both actively running for different admission cohorts, which is
+  normal for a real college. There used to be a DB-level constraint
+  allowing only one `is_current=True` semester per program; it's been
+  removed (`apps/academics/migrations/0004_...py`). The few places that
+  used to pick "the" current semester with an implicit single-result
+  assumption were audited: student-facing "current semester GPA" lookups
+  (`apps/assessments/views.py::student_overview`,
+  `apps/dashboard/views.py::student_dashboard`) now key off
+  `StudentProfile.current_semester` - the specific semester *that student*
+  is in - rather than "any semester flagged current," since a program-wide
+  flag can no longer identify a single semester. Default-selection pickers
+  on report/timetable pages (where the user can just pick a different
+  semester from a dropdown either way) were left as-is.
+- **Adding a Course is not the same as making it enrollable** - a common
+  point of confusion: the Courses screen only adds a catalog entry
+  (`Course`). A student can't be enrolled in it until a **Course
+  Offering** is also created under Faculty Assignments, tying that course
+  to a semester, teacher, and section. The two enrollment screens
+  (`/academics/enrollments/by-offering/` and `/by-student/`) now say this
+  explicitly, with a link straight to "Add Faculty Assignment," instead of
+  just silently showing an empty dropdown when no offering exists yet.
 - **Setup data**: Departments (accounts), Rooms/Time Slots (timetable),
   Assessment Categories (assessments), Fee Categories/Fee Structures
   (finance, Accountant/Admin only) - all plain CRUD via the shared
@@ -509,6 +643,11 @@ one **Administration** hub (`/administration/`, role-scoped by section).
   lifecycle: activate/deactivate any user, with deactivating a
   Coordinator/Accountant/Admin account restricted to Admin only (a
   Coordinator can't lock out another Coordinator or an Accountant).
+  Filterable by role, department (a student's department is read through
+  their program), and a free-text search across name/username/email/roll
+  number/employee ID - same `Q(...icontains...)` search pattern already
+  used by the student progress-report picker
+  (`apps/reports/views.py::progress_students`).
 - The Django Admin Panel remains registered (`/admin/`) as an Admin-only
   fallback for anything not covered above, but is no longer part of any
   normal Coordinator/Accountant workflow - removed from their nav

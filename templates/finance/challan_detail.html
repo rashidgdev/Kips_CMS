@@ -12,6 +12,27 @@
             {% icon 'document-chart' 'h-4 w-4' %}
             View / Print PDF
         </a>
+        {% if status == 'unpaid' or status == 'overdue' %}
+        <form method="post" action="{% url 'finance:challan-pay' challan.pk %}" class="flex items-end gap-2">
+            {% csrf_token %}
+            <div>
+                <label for="payment_date" class="field-label">Payment date</label>
+                <input type="date" id="payment_date" name="payment_date" value="{{ today|date:'Y-m-d' }}" class="input-field" required>
+            </div>
+            <div>
+                <label for="payment_method" class="field-label">Method</label>
+                <select id="payment_method" name="payment_method" class="input-field">
+                    {% for value, label in payment_methods %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">
+                {% icon 'check-circle' 'h-4 w-4' %}
+                Record Payment
+            </button>
+        </form>
+        {% endif %}
         {% if status != 'cancelled' %}
         <form method="post" action="{% url 'finance:challan-cancel' challan.pk %}"
               onsubmit="return confirm('Cancel this challan? This cannot be undone.');">
@@ -33,6 +54,7 @@
             <p class="text-lg font-semibold">
                 {% if status == 'paid' %}<span class="badge-green">Paid</span>
                 {% elif status == 'cancelled' %}<span class="badge-gray">Cancelled</span>
+                {% elif status == 'overdue' %}<span class="badge-red">Overdue</span>
                 {% else %}<span class="badge-yellow">Unpaid</span>{% endif %}
             </p>
         </div>

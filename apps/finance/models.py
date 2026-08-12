@@ -60,6 +60,12 @@ class Payment(TimeStampedModel):
         ONLINE = 'online', 'Online'
 
     fee_item = models.ForeignKey(StudentFeeItem, on_delete=models.CASCADE, related_name='payments')
+    challan = models.ForeignKey(
+        'Challan', on_delete=models.SET_NULL, null=True, blank=True, related_name='payments',
+        help_text='The challan this payment was recorded against, if any - lets a challan\'s own '
+                   'paid/unpaid status be tracked independently of the fee item\'s overall balance, '
+                   'since one fee item can now be split across several installment challans.',
+    )
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
     payment_date = models.DateField()
     payment_method = models.CharField(max_length=20, choices=Method.choices, default=Method.CASH)
@@ -110,8 +116,10 @@ class Challan(TimeStampedModel):
 
 
 class ChallanLine(TimeStampedModel):
-    """One fee item on a challan, with the outstanding amount frozen at the
-    moment the challan was issued."""
+    """One fee item on a challan, with the amount frozen at the moment the
+    challan was issued - not necessarily the item's full outstanding
+    balance, since a challan can cover just part of it (an installment);
+    the same fee item can appear on more than one challan over time."""
 
     challan = models.ForeignKey(Challan, on_delete=models.CASCADE, related_name='lines')
     fee_item = models.ForeignKey(

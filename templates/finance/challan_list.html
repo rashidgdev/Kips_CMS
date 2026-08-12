@@ -32,6 +32,7 @@
                 <td>
                     {% if row.status == 'paid' %}<span class="badge-green">Paid</span>
                     {% elif row.status == 'cancelled' %}<span class="badge-gray">Cancelled</span>
+                    {% elif row.status == 'overdue' %}<span class="badge-red">Overdue</span>
                     {% else %}<span class="badge-yellow">Unpaid</span>{% endif %}
                 </td>
                 <td class="whitespace-nowrap">

@@ -69,6 +69,7 @@
                     <td>{{ row.challan.due_date }}</td>
                     <td>
                         {% if row.status == 'paid' %}<span class="badge-green">Paid</span>
+                        {% elif row.status == 'overdue' %}<span class="badge-red">Overdue</span>
                         {% else %}<span class="badge-yellow">Unpaid</span>{% endif %}
                     </td>
                     <td>

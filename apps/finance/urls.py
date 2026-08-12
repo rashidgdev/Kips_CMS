@@ -19,6 +19,7 @@ urlpatterns = [
     path('challans/<int:challan_id>/', views.challan_detail, name='challan-detail'),
     path('challans/<int:challan_id>/pdf/', views.challan_pdf, name='challan-pdf'),
     path('challans/<int:challan_id>/cancel/', views.challan_cancel, name='challan-cancel'),
+    path('challans/<int:challan_id>/pay/', views.challan_record_payment, name='challan-pay'),
 
     path('categories/', views.FeeCategoryListView.as_view(), name='categories'),
     path('categories/new/', views.FeeCategoryCreateView.as_view(), name='category-new'),

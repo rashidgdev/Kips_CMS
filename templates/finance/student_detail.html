@@ -13,12 +13,9 @@
                 Generate Fee Items ({{ student.current_semester|default:"no current semester" }})
             </button>
         </form>
-        <form method="post" action="{% url 'finance:challan-generate' student.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn-primary">
-                Generate Challan
-            </button>
-        </form>
+        <a href="{% url 'finance:challan-generate' student.pk %}" class="btn-primary">
+            Generate Challan
+        </a>
     </div>
 </div>
 
@@ -95,6 +92,7 @@
                     <td>
                         {% if row.status == 'paid' %}<span class="badge-green">Paid</span>
                         {% elif row.status == 'cancelled' %}<span class="badge-gray">Cancelled</span>
+                        {% elif row.status == 'overdue' %}<span class="badge-red">Overdue</span>
                         {% else %}<span class="badge-yellow">Unpaid</span>{% endif %}
                     </td>
                     <td>

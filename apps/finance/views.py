@@ -1,5 +1,6 @@
 import csv
 import datetime
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -17,7 +18,7 @@ from apps.common.permissions import role_required
 
 from .challan_pdf import render_challan_pdf
 from .forms import FeeCategoryForm, FeeStructureForm, PaymentForm
-from .models import Challan, FeeCategory, FeeStructure, StudentFeeItem
+from .models import Challan, FeeCategory, FeeStructure, Payment, StudentFeeItem
 from .services import (
     generate_challan,
     generate_fee_items_for_semester,
@@ -25,6 +26,7 @@ from .services import (
     get_challan_status,
     get_fee_item_balance,
     get_student_fee_overview,
+    record_challan_payment,
 )
 
 FINANCE_STAFF_ROLES = (Roles.ACCOUNTANT, Roles.ADMIN)
@@ -244,24 +246,76 @@ def student_overview(request):
 @role_required(Roles.ACCOUNTANT, Roles.ADMIN)
 def challan_generate(request, student_id):
     student = get_object_or_404(StudentProfile, pk=student_id)
+    semester = student.current_semester
+    if not semester:
+        messages.error(request, f'{student} has no current semester set - cannot issue a challan.')
+        return redirect('finance:student-detail', student_id=student.pk)
+
+    outstanding_rows = [
+        row
+        for row in get_student_fee_overview(student)['rows']
+        if row['item'].semester_id == semester.pk and row['outstanding'] > 0
+    ]
+
     if request.method == 'POST':
-        if not student.current_semester:
-            messages.error(request, f'{student} has no current semester set - cannot issue a challan.')
+        items = []
+        for row in outstanding_rows:
+            item = row['item']
+            if not request.POST.get(f'include_{item.pk}'):
+                continue
+            raw_amount = request.POST.get(f'amount_{item.pk}', '').strip()
+            try:
+                amount = Decimal(raw_amount)
+            except InvalidOperation:
+                amount = None
+            items.append((item, amount))
+
+        if not items:
+            messages.error(request, 'Select at least one fee item to include in the challan.')
         else:
-            challan, created = generate_challan(student, student.current_semester, created_by=request.user)
+            challan, created = generate_challan(student, semester, created_by=request.user, items=items)
             if challan and created:
                 messages.success(request, f'Challan {challan.challan_number} issued for Rs. {challan.total_amount}.')
                 return redirect('finance:challan-detail', challan_id=challan.pk)
             elif challan:
                 messages.info(
                     request,
-                    f'Challan {challan.challan_number} for Rs. {challan.total_amount} is already active and unpaid '
-                    '- reused instead of issuing a duplicate. Cancel it first if you need a fresh one.',
+                    f'Challan {challan.challan_number} for Rs. {challan.total_amount} already covers exactly this '
+                    'selection and is still unpaid - reused instead of issuing a duplicate.',
                 )
                 return redirect('finance:challan-detail', challan_id=challan.pk)
             else:
-                messages.info(request, 'Nothing outstanding for the current semester - no challan issued.')
-    return redirect('finance:student-detail', student_id=student.pk)
+                messages.error(
+                    request,
+                    'Could not issue a challan - check that each amount is greater than zero and does not '
+                    'exceed what is outstanding for that item.',
+                )
+
+    return render(
+        request,
+        'finance/challan_generate.html',
+        {'student': student, 'semester': semester, 'rows': outstanding_rows},
+    )
+
+
+@role_required(Roles.ACCOUNTANT, Roles.ADMIN)
+def challan_record_payment(request, challan_id):
+    challan = get_object_or_404(Challan, pk=challan_id)
+    if request.method == 'POST':
+        try:
+            payment_date = datetime.datetime.strptime(request.POST.get('payment_date', ''), '%Y-%m-%d').date()
+        except ValueError:
+            payment_date = datetime.date.today()
+        payment_method = request.POST.get('payment_method') or Payment.Method.CASH
+
+        payments = record_challan_payment(
+            challan, payment_date=payment_date, payment_method=payment_method, received_by=request.user
+        )
+        if payments:
+            messages.success(request, f'Payment recorded for challan {challan.challan_number}.')
+        else:
+            messages.error(request, 'Could not record a payment - this challan may already be paid or cancelled.')
+    return redirect('finance:challan-detail', challan_id=challan.pk)
 
 
 @role_required(Roles.ACCOUNTANT, Roles.ADMIN)
@@ -279,7 +333,12 @@ def challan_detail(request, challan_id):
     lines = challan.lines.select_related('fee_item__category')
     status = get_challan_status(challan)
     return render(
-        request, 'finance/challan_detail.html', {'challan': challan, 'lines': lines, 'status': status}
+        request,
+        'finance/challan_detail.html',
+        {
+            'challan': challan, 'lines': lines, 'status': status,
+            'today': datetime.date.today(), 'payment_methods': Payment.Method.choices,
+        },
     )
 
 

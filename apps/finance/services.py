@@ -68,50 +68,65 @@ def get_student_fee_overview(student):
 
 
 def get_challan_status(challan):
-    """Computed on read, same pattern as fee item status - a challan is
-    'paid' once every fee item it covers has been fully settled, however
-    that happened (no separate payment-to-challan bookkeeping needed)."""
+    """A challan is 'paid' once payments recorded directly against it (see
+    record_challan_payment) cover its total - tracked independently of the
+    underlying fee items' overall balances, since a single fee item can now
+    be split across several installment challans issued over time."""
     if challan.is_cancelled:
         return 'cancelled'
-    lines = challan.lines.select_related('fee_item').prefetch_related('fee_item__payments')
-    if all(get_fee_item_balance(line.fee_item)['outstanding'] <= 0 for line in lines):
+    paid = sum((p.amount_paid for p in challan.payments.all()), Decimal('0'))
+    if paid >= challan.total_amount:
         return 'paid'
+    if challan.due_date < datetime.date.today():
+        return 'overdue'
     return 'unpaid'
 
 
-def generate_challan(student, semester, created_by, due_days=14):
-    """Issues a challan covering every currently-outstanding fee item for this
-    student in this semester.
+def generate_challan(student, semester, created_by, items, due_days=14):
+    """Issues a challan covering exactly the fee items and amounts the
+    caller selected - not automatically every outstanding item at its full
+    balance, since students often pay in installments (e.g. one category
+    now, another later, or part of a category's balance now).
 
-    Returns (challan, created): `created` is False if an active, unpaid
-    challan for this student+semester already exists - that challan is
-    reused (same number, same amount) instead of issuing a duplicate live
-    voucher for the same dues. To reissue with a fresh number (e.g. the
-    student lost it), cancel the old one first.
+    `items` is a list of (StudentFeeItem, Decimal amount) pairs. Each
+    amount must be > 0 and no more than that item's current outstanding
+    balance - the rest of that item's balance is left outstanding for a
+    future challan.
 
-    Returns (None, False) if nothing is outstanding - avoids issuing an
-    empty/zero-amount voucher.
+    Returns (challan, created). If an existing, non-cancelled, still-unpaid
+    challan for this student+semester already covers this *exact* set of
+    items and amounts, it's reused instead of issuing a duplicate (guards
+    against an accidental double form submission, not against issuing a
+    second, different installment challan while an earlier one is unpaid -
+    that's expected with installments).
+
+    Returns (None, False) if `items` is empty after validation.
     """
+    requested = {}
+    for item, amount in items:
+        if item.student_id != student.pk or item.semester_id != semester.pk:
+            continue
+        outstanding = get_fee_item_balance(item)['outstanding']
+        if amount is None or amount <= 0 or amount > outstanding:
+            continue
+        requested[item.pk] = (item, amount)
+
+    if not requested:
+        return None, False
+
     existing = (
         Challan.objects.filter(student=student, semester=semester, is_cancelled=False)
         .order_by('-issue_date', '-pk')
-        .first()
     )
-    if existing and get_challan_status(existing) == 'unpaid':
-        return existing, False
+    for candidate in existing:
+        if get_challan_status(candidate) != 'unpaid':
+            continue
+        existing_lines = {line.fee_item_id: line.amount for line in candidate.lines.all()}
+        requested_lines = {pk: amount for pk, (_item, amount) in requested.items()}
+        if existing_lines == requested_lines:
+            return candidate, False
 
-    items = StudentFeeItem.objects.filter(student=student, semester=semester)
-    lines_to_create = []
-    total = Decimal('0')
-    for item in items:
-        balance = get_fee_item_balance(item)
-        if balance['outstanding'] > 0:
-            lines_to_create.append((item, balance['outstanding']))
-            total += balance['outstanding']
-
-    if not lines_to_create:
-        return None, False
-
+    total = sum((amount for _item, amount in requested.values()), Decimal('0'))
     today = datetime.date.today()
     challan = Challan.objects.create(
         student=student,
@@ -122,9 +137,32 @@ def generate_challan(student, semester, created_by, due_days=14):
         created_by=created_by,
     )
     ChallanLine.objects.bulk_create(
-        [ChallanLine(challan=challan, fee_item=item, amount=amount) for item, amount in lines_to_create]
+        [ChallanLine(challan=challan, fee_item=item, amount=amount) for item, amount in requested.values()]
     )
     return challan, True
+
+
+def record_challan_payment(challan, payment_date, payment_method, received_by):
+    """Marks a challan as paid: creates one Payment per ChallanLine (for
+    that line's exact amount), linked back to this challan so its status
+    reflects only what was actually requested on it - matching the
+    real-world flow where a student pays the full challan amount at the
+    bank in one transaction. Safe to call only while the challan isn't
+    already paid/cancelled; returns the created Payment list, or [] otherwise."""
+    if get_challan_status(challan) not in ('unpaid', 'overdue'):
+        return []
+    payments = [
+        Payment(
+            fee_item=line.fee_item,
+            challan=challan,
+            amount_paid=line.amount,
+            payment_date=payment_date,
+            payment_method=payment_method,
+            received_by=received_by,
+        )
+        for line in challan.lines.all()
+    ]
+    return Payment.objects.bulk_create(payments)
 
 
 def get_all_students_fee_summary():
