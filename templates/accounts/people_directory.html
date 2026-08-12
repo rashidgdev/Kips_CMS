@@ -15,9 +15,13 @@
     </div>
 </div>
 
-<form method="get" class="card mb-4 flex items-end gap-2">
+<form method="get" class="card mb-4 flex flex-wrap items-end gap-2">
+    <div class="flex-1 min-w-[12rem]">
+        <label for="q" class="field-label">Search</label>
+        <input type="text" id="q" name="q" value="{{ query }}" placeholder="Name, username, email, roll no., employee ID..." class="input-field">
+    </div>
     <div>
-        <label for="role" class="field-label">Filter by role</label>
+        <label for="role" class="field-label">Role</label>
         <select id="role" name="role" class="input-field">
             <option value="">All roles</option>
             {% for value, label in roles %}
@@ -25,7 +29,22 @@
             {% endfor %}
         </select>
     </div>
-    <button type="submit" class="btn-secondary">Filter</button>
+    <div>
+        <label for="department" class="field-label">Department</label>
+        <select id="department" name="department" class="input-field">
+            <option value="">All departments</option>
+            {% for dept in departments %}
+                <option value="{{ dept.pk }}" {% if department_filter == dept.pk|stringformat:'s' %}selected{% endif %}>{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn-secondary">
+        {% icon 'search' 'h-4 w-4' %}
+        Filter
+    </button>
+    {% if role_filter or department_filter or query %}
+        <a href="{% url 'accounts:people' %}" class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">Clear</a>
+    {% endif %}
 </form>
 
 <div class="card page-enter">
@@ -37,6 +56,8 @@
                 <th>Name</th>
                 <th>Username</th>
                 <th>Role</th>
+                <th>ID</th>
+                <th>Department</th>
                 <th>Email</th>
                 <th>Status</th>
                 <th></th>
@@ -48,6 +69,18 @@
                 <td class="font-medium text-gray-900">{{ person.get_full_name }}</td>
                 <td>{{ person.username }}</td>
                 <td>{{ person.get_role_display }}</td>
+                <td>
+                    {% if person.student_profile %}{{ person.student_profile.roll_number }}
+                    {% elif person.teacher_profile %}{{ person.teacher_profile.employee_id }}
+                    {% elif person.staff_profile %}{{ person.staff_profile.employee_id }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if person.teacher_profile %}{{ person.teacher_profile.department.name|default:'-' }}
+                    {% elif person.student_profile %}{{ person.student_profile.program.department.name|default:'-' }}
+                    {% else %}&ndash;
+                    {% endif %}
+                </td>
                 <td>{{ person.email }}</td>
                 <td>
                     {% if person.is_active %}

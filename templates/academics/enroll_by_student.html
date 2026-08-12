@@ -73,7 +73,13 @@
         });
     </script>
     {% else %}
-    <p class="text-sm text-gray-500">No active course offerings found for this student's program.</p>
+    <p class="text-sm text-gray-500">
+        No active course offerings exist yet for {{ selected_student.program }}. Adding a course to
+        the catalog isn't enough by itself - a
+        <a href="{% url 'academics:offering-new' %}" class="link">Course Offering</a>
+        (course + semester + teacher + section) has to be created for it before this student can be
+        enrolled.
+    </p>
     {% endif %}
 </div>
 {% endif %}

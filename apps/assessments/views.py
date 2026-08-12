@@ -154,8 +154,12 @@ def enter_marks(request, assessment_id):
 def student_overview(request):
     profile = get_profile(request)
     results = get_student_course_overview(profile)
+    # The student's own semester, not "whichever semester happens to be
+    # marked current" - a program can have several concurrent current
+    # semesters (different cohorts), so semester__is_current isn't specific
+    # enough to identify this particular student's semester.
     current_semester_gpa = SemesterGPA.objects.filter(
-        student=profile, semester__is_current=True
+        student=profile, semester=profile.current_semester
     ).select_related('semester').first()
     cgpa = get_cgpa(profile)
     return render(

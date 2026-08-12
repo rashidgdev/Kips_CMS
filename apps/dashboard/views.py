@@ -35,7 +35,10 @@ def student_dashboard(request):
     cgpa = current_gpa = overall_attendance = None
     if profile:
         cgpa = get_cgpa(profile)
-        current_gpa = SemesterGPA.objects.filter(student=profile, semester__is_current=True).first()
+        # The student's own semester - a program can have several concurrent
+        # current semesters (different cohorts), so semester__is_current
+        # isn't specific enough to identify this particular student's one.
+        current_gpa = SemesterGPA.objects.filter(student=profile, semester=profile.current_semester).first()
         percentages = [s['percentage'] for s in get_attendance_overview(profile) if s['percentage'] is not None]
         if percentages:
             overall_attendance = round(sum(percentages) / len(percentages), 1)
