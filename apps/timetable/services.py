@@ -40,12 +40,17 @@ def check_conflicts(course_offering, room, time_slot, exclude_entry_id=None):
     return errors
 
 
-def generate_time_slots(days, day_start_time, lecture_duration_minutes, number_of_lectures, break_minutes=0):
-    """Builds `number_of_lectures` back-to-back TimeSlots (Period 1, Period 2, ...)
-    per selected day, instead of the user adding each one by hand. Reuses an
-    existing slot instead of erroring if it already exists (e.g. re-running
-    this after adding a day), so it's safe to run more than once."""
-    break_minutes = break_minutes or 0
+def generate_time_slots(days, day_start_time, lecture_duration_minutes, number_of_lectures, breaks=None):
+    """Builds `number_of_lectures` TimeSlots (Period 1, Period 2, ...) per
+    selected day, instead of the user adding each one by hand. Every lecture
+    is the same length, but breaks don't have to fall after every lecture
+    and don't have to be the same length - `breaks` is a list of
+    (after_lecture, duration_minutes) pairs, e.g. [(2, 15), (4, 30)] means a
+    15 min break after lecture 2 and a 30 min break after lecture 4, with
+    lectures 1-2, 3-4, and 5+ otherwise back-to-back. Reuses an existing
+    slot instead of erroring if it already exists (e.g. re-running this
+    after adding a day), so it's safe to run more than once."""
+    break_minutes_by_lecture = dict(breaks or [])
     today = datetime.date.today()
     created, skipped = [], []
 
@@ -63,14 +68,38 @@ def generate_time_slots(days, day_start_time, lecture_duration_minutes, number_o
             )
             (created if was_created else skipped).append(slot)
 
+            break_minutes = break_minutes_by_lecture.get(period_number, 0)
             next_start_dt = datetime.datetime.combine(today, current_end) + datetime.timedelta(minutes=break_minutes)
             current_start = next_start_dt.time()
 
     return created, skipped
 
 
+def _minutes_between(start_time, end_time):
+    today = datetime.date.today()
+    delta = datetime.datetime.combine(today, end_time) - datetime.datetime.combine(today, start_time)
+    return int(delta.total_seconds() // 60)
+
+
+MAX_BREAK_MINUTES = 120  # a school break is never longer than this in practice
+
+
 def build_grid(entries):
-    """Builds a day x period grid for template rendering from a TimetableEntry queryset."""
+    """Builds a day x period grid for template rendering from a TimetableEntry
+    queryset. Any genuine time gap between one period's end and the next
+    period's start (e.g. left by the "Generate Time Slots" break settings)
+    is surfaced as its own labeled break row spanning every day column,
+    instead of being an invisible gap in the schedule.
+
+    The period list is a union of every TimeSlot's (start, end) across every
+    day (not just the days actually being viewed), because that's what lets
+    a day with no class in some period still render an empty cell in the
+    right row. If two days' periods were configured at very different times
+    (e.g. one day starts mid-afternoon, another starts in the morning), the
+    "gap" between them in that merged list isn't a real break - it's just
+    where the union jumps from one day's schedule to another's. Capping at
+    MAX_BREAK_MINUTES keeps those artifacts from being mislabeled as one
+    giant break while still catching every plausible real one."""
     entries = entries.select_related(
         'time_slot', 'room', 'course_offering__course', 'course_offering__teacher__user'
     )
@@ -88,12 +117,25 @@ def build_grid(entries):
     }
 
     days = TimeSlot.DayOfWeek.choices
-    grid = []
-    for period in periods:
-        row = {'period': period, 'cells': []}
+    rows = []
+    for index, period in enumerate(periods):
+        cells = []
         for day_value, day_label in days:
             key = (day_value, period['start_time'], period['end_time'])
-            row['cells'].append({'day': day_value, 'day_label': day_label, 'entry': entry_map.get(key)})
-        grid.append(row)
+            cells.append({'day': day_value, 'day_label': day_label, 'entry': entry_map.get(key)})
+        rows.append({'type': 'period', 'period': period, 'cells': cells})
 
-    return {'days': days, 'rows': grid}
+        if index + 1 < len(periods):
+            next_period = periods[index + 1]
+            gap_minutes = _minutes_between(period['end_time'], next_period['start_time'])
+            if 0 < gap_minutes <= MAX_BREAK_MINUTES:
+                rows.append(
+                    {
+                        'type': 'break',
+                        'start_time': period['end_time'],
+                        'end_time': next_period['start_time'],
+                        'duration_minutes': gap_minutes,
+                    }
+                )
+
+    return {'days': days, 'rows': rows}

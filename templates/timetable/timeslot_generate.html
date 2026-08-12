@@ -47,14 +47,29 @@
                 {{ form.number_of_lectures }}
                 {% for error in form.number_of_lectures.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
             </div>
-            <div class="sm:col-span-2">
-                <label for="{{ form.break_minutes.id_for_label }}" class="field-label">
-                    {{ form.break_minutes.label }}
-                    <span class="font-normal text-gray-400">(optional)</span>
-                </label>
-                {{ form.break_minutes }}
-                {% if form.break_minutes.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.break_minutes.help_text }}</p>{% endif %}
-                {% for error in form.break_minutes.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+
+        <div class="mt-5">
+            <label class="field-label">
+                Breaks
+                <span class="font-normal text-gray-400">(optional)</span>
+            </label>
+            <p class="mb-2 text-xs text-gray-400">
+                Breaks don't have to fall after every lecture, and can be different lengths -
+                e.g. a 15 min break after lecture 2, then a 30 min lunch break after lecture 4.
+            </p>
+            <div class="space-y-2">
+                {% for after_field, duration_field in form.break_rows %}
+                <div class="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+                    <span>After lecture</span>
+                    <div class="w-20">{{ after_field }}</div>
+                    <span>break for</span>
+                    <div class="w-24">{{ duration_field }}</div>
+                    <span>minutes</span>
+                </div>
+                {% for error in after_field.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                {% for error in duration_field.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                {% endfor %}
             </div>
         </div>
 
@@ -73,9 +88,10 @@
     <p>
         Each selected day gets the same set of periods (Period 1, Period 2, ...), starting at
         the working day's start time, with the length of each lecture worked out by dividing
-        the working day (minus any breaks) evenly by the number of lectures. Running this
-        again is safe - any period that already exists is left untouched, only missing ones
-        are added.
+        the working day (minus any breaks) evenly by the number of lectures. Breaks are placed
+        at the lecture positions you specify, not after every lecture, and each can be a
+        different length. Running this again is safe - any period that already exists is left
+        untouched, only missing ones are added.
     </p>
 </div>
 {% endblock %}

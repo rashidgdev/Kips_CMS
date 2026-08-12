@@ -12,6 +12,14 @@
     </thead>
     <tbody>
         {% for row in grid.rows %}
+        {% if row.type == 'break' %}
+        <tr>
+            <td colspan="{{ grid.days|length|add:1 }}" class="rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-amber-700">
+                {% icon 'clock' 'h-3.5 w-3.5 inline -mt-0.5 mr-1' %}
+                Break &middot; {{ row.start_time|time:"g:i A" }}-{{ row.end_time|time:"g:i A" }} ({{ row.duration_minutes }} min)
+            </td>
+        </tr>
+        {% else %}
         <tr>
             <td class="whitespace-nowrap rounded-lg bg-gray-50 px-3 py-2 align-top text-xs font-medium text-gray-500">
                 {{ row.period.label }}<br>
@@ -37,6 +45,7 @@
             </td>
             {% endfor %}
         </tr>
+        {% endif %}
         {% endfor %}
     </tbody>
 </table>

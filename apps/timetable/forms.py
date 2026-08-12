@@ -41,11 +41,18 @@ class TimeSlotForm(TailwindFormMixin, forms.ModelForm):
         fields = ['day_of_week', 'start_time', 'end_time', 'label']
 
 
+MAX_BREAKS = 5
+
+
 class TimeSlotGeneratorForm(TailwindFormMixin, forms.Form):
     """Generates a full day's worth of lecture time slots instead of adding
     each one by hand. Lecture length is not entered directly - it's computed
     by evenly dividing the working day span (minus any breaks) across the
-    requested number of lectures."""
+    requested number of lectures. Breaks don't have to fall after every
+    lecture and don't have to be the same length - each of up to
+    MAX_BREAKS break rows independently says "after lecture N, break for
+    X minutes" (e.g. a 15 min break after lecture 2, a 30 min lunch break
+    after lecture 4)."""
 
     days = forms.MultipleChoiceField(
         choices=TimeSlot.DayOfWeek.choices,
@@ -56,21 +63,56 @@ class TimeSlotGeneratorForm(TailwindFormMixin, forms.Form):
     day_start_time = forms.TimeField(label='Start of working day', widget=forms.TimeInput(attrs={'type': 'time'}))
     day_end_time = forms.TimeField(label='End of working day', widget=forms.TimeInput(attrs={'type': 'time'}))
     number_of_lectures = forms.IntegerField(label='Number of lectures per day', min_value=1, initial=6)
-    break_minutes = forms.IntegerField(
-        label='Break between lectures (minutes)', min_value=0, initial=0, required=False,
-        help_text='Optional - leave as 0 for back-to-back lectures with no gap.',
-    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['days'].widget.attrs.pop('class', None)
+        for i in range(1, MAX_BREAKS + 1):
+            self.fields[f'break_after_{i}'] = forms.IntegerField(
+                label='After lecture', min_value=1, required=False,
+                widget=forms.NumberInput(attrs={'class': INPUT_CLASSES}),
+            )
+            self.fields[f'break_duration_{i}'] = forms.IntegerField(
+                label='Break length (minutes)', min_value=1, required=False,
+                widget=forms.NumberInput(attrs={'class': INPUT_CLASSES}),
+            )
+
+    @property
+    def break_rows(self):
+        """Pairs up the break_after_N/break_duration_N fields so the template
+        can render them as MAX_BREAKS simple two-input rows."""
+        return [(self[f'break_after_{i}'], self[f'break_duration_{i}']) for i in range(1, MAX_BREAKS + 1)]
 
     def clean(self):
         cleaned = super().clean()
         start = cleaned.get('day_start_time')
         end = cleaned.get('day_end_time')
         count = cleaned.get('number_of_lectures')
-        break_minutes = cleaned.get('break_minutes') or 0
+
+        breaks = []
+        seen_positions = set()
+        for i in range(1, MAX_BREAKS + 1):
+            after = cleaned.get(f'break_after_{i}')
+            duration = cleaned.get(f'break_duration_{i}')
+            if after is None and duration is None:
+                continue
+            if after is None or duration is None:
+                raise forms.ValidationError(
+                    f'Break {i}: fill in both "after lecture" and "break length", or leave both blank.'
+                )
+            if count and after >= count:
+                raise forms.ValidationError(
+                    f'Break {i}: "after lecture {after}" is not valid for {count} lecture(s) - a break must '
+                    'fall after one of the lectures and before the last one.'
+                )
+            if after in seen_positions:
+                raise forms.ValidationError(
+                    f'Two breaks are both set to fall after lecture {after} - combine them into one break.'
+                )
+            seen_positions.add(after)
+            breaks.append((after, duration))
+        breaks.sort(key=lambda pair: pair[0])
+        cleaned['breaks'] = breaks
 
         if start and end and count:
             if end <= start:
@@ -80,15 +122,15 @@ class TimeSlotGeneratorForm(TailwindFormMixin, forms.Form):
                 datetime.datetime.combine(datetime.date.today(), end)
                 - datetime.datetime.combine(datetime.date.today(), start)
             ).total_seconds() / 60
-            break_total = break_minutes * (count - 1)
+            break_total = sum(duration for _after, duration in breaks)
             available_minutes = span_minutes - break_total
 
             lecture_duration_minutes = int(available_minutes // count)
             if lecture_duration_minutes < 5:
                 raise forms.ValidationError(
                     f'Splitting {start.strftime("%I:%M %p").lstrip("0")}-{end.strftime("%I:%M %p").lstrip("0")} '
-                    f'into {count} lectures with {break_minutes} min breaks between them leaves less than 5 '
-                    'minutes per lecture. Reduce the number of lectures or breaks, or extend the working day.'
+                    f'into {count} lectures with {break_total} min of breaks leaves less than 5 minutes per '
+                    'lecture. Reduce the number of lectures or break time, or extend the working day.'
                 )
             cleaned['lecture_duration_minutes'] = lecture_duration_minutes
         return cleaned

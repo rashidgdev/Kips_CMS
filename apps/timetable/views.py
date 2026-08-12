@@ -5,31 +5,13 @@ from django.urls import reverse, reverse_lazy
 from apps.academics.models import CourseOffering, Enrollment, Semester
 from apps.accounts.models import Roles
 from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudUpdateView
-from apps.common.exports import export_pdf
 from apps.common.middleware import get_profile
 from apps.common.permissions import role_required
 
 from .forms import RoomForm, TimeSlotForm, TimeSlotGeneratorForm, TimetableEntryForm
+from .grid_pdf import render_timetable_grid_pdf
 from .models import Room, TimeSlot, TimetableEntry
 from .services import build_grid, check_conflicts, generate_time_slots
-
-_TIMETABLE_PDF_HEADERS = ['Day', 'Time', 'Course', 'Room', 'Teacher']
-
-
-def _timetable_pdf_rows(entries):
-    entries = entries.select_related(
-        'time_slot', 'room', 'course_offering__course', 'course_offering__teacher__user'
-    ).order_by('time_slot__day_of_week', 'time_slot__start_time')
-    return [
-        [
-            entry.time_slot.get_day_of_week_display(),
-            f'{entry.time_slot.start_time_display}-{entry.time_slot.end_time_display}',
-            str(entry.course_offering.course),
-            str(entry.room),
-            entry.course_offering.teacher.user.get_full_name(),
-        ]
-        for entry in entries
-    ]
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN)
 
@@ -121,7 +103,7 @@ def timeslot_generate(request):
                 day_start_time=data['day_start_time'],
                 lecture_duration_minutes=data['lecture_duration_minutes'],
                 number_of_lectures=data['number_of_lectures'],
-                break_minutes=data['break_minutes'],
+                breaks=data['breaks'],
             )
             if created:
                 messages.success(
@@ -173,10 +155,8 @@ def semester_grid(request, semester_id=None):
 def semester_grid_pdf(request, semester_id):
     semester = get_object_or_404(Semester, pk=semester_id)
     entries = TimetableEntry.objects.filter(course_offering__semester=semester)
-    return export_pdf(
-        f'timetable_{semester.pk}', f'Timetable - {semester}',
-        _TIMETABLE_PDF_HEADERS, _timetable_pdf_rows(entries),
-    )
+    grid = build_grid(entries)
+    return render_timetable_grid_pdf(grid, 'Timetable', subtitle=str(semester))
 
 
 @role_required(Roles.COORDINATOR, Roles.ADMIN)
@@ -247,10 +227,8 @@ def teacher_timetable(request):
 @role_required(Roles.TEACHER, Roles.HOD)
 def teacher_timetable_pdf(request):
     profile = get_profile(request)
-    return export_pdf(
-        'my_timetable', f'Timetable - {profile}',
-        _TIMETABLE_PDF_HEADERS, _timetable_pdf_rows(_teacher_current_entries(profile)),
-    )
+    grid = build_grid(_teacher_current_entries(profile))
+    return render_timetable_grid_pdf(grid, 'My Timetable', subtitle=str(profile))
 
 
 @role_required(Roles.STUDENT)
@@ -266,7 +244,5 @@ def student_timetable(request):
 @role_required(Roles.STUDENT)
 def student_timetable_pdf(request):
     profile = get_profile(request)
-    return export_pdf(
-        'my_timetable', f'Timetable - {profile}',
-        _TIMETABLE_PDF_HEADERS, _timetable_pdf_rows(_student_current_entries(profile)),
-    )
+    grid = build_grid(_student_current_entries(profile))
+    return render_timetable_grid_pdf(grid, 'My Timetable', subtitle=str(profile))
