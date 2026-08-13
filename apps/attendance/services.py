@@ -5,6 +5,33 @@ from .models import AttendanceRecord
 ATTENDED_STATUSES = (AttendanceRecord.Status.PRESENT, AttendanceRecord.Status.LATE)
 
 
+def mark_attendance_bulk(session, status_by_student_id, marked_by):
+    """Upserts one AttendanceRecord per (session, student) pair - shared by
+    the Django view (views.py::mark_attendance) and the REST API, so the
+    same "unknown status silently falls back to Present" rule applies
+    identically everywhere. `status_by_student_id` is a
+    {student_pk: status_string} mapping; only students already ENROLLED in
+    the session's course offering are ever written (extra/unknown student
+    ids in the mapping are ignored)."""
+    from apps.academics.models import Enrollment
+
+    enrollments = Enrollment.objects.filter(
+        course_offering=session.course_offering, status=Enrollment.Status.ENROLLED
+    ).select_related('student')
+
+    saved = []
+    for enrollment in enrollments:
+        student = enrollment.student
+        status = status_by_student_id.get(student.pk, AttendanceRecord.Status.PRESENT)
+        if status not in AttendanceRecord.Status.values:
+            status = AttendanceRecord.Status.PRESENT
+        record, _ = AttendanceRecord.objects.update_or_create(
+            session=session, student=student, defaults={'status': status, 'marked_by': marked_by},
+        )
+        saved.append(record)
+    return saved
+
+
 def get_student_course_stats(student, course_offering):
     """Compute delivered/attended/absent lecture counts and % for one student+course."""
     records = AttendanceRecord.objects.filter(session__course_offering=course_offering, student=student)

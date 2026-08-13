@@ -27,6 +27,29 @@ class HasRole(BasePermission):
         return type('HasRoleScoped', (cls,), {'allowed_roles': roles})
 
 
+def resolve_profile(user):
+    """Like apps.common.middleware.get_profile(), but resolves fresh from a
+    `User` instance instead of reading request._cached_profile. That cache
+    is populated by RoleContextMiddleware, which runs *before* DRF's own
+    authentication resolves request.user for token-based auth (JWT) - for a
+    JWT request there's no session, so the middleware sees an AnonymousUser
+    and caches nothing/wrong, while DRF only authenticates the real user
+    later, inside the view. Session-authenticated requests aren't affected
+    (the session user is already resolved by middleware time), but any API
+    code must use this helper, not the middleware one, to work correctly
+    for both auth methods."""
+    from apps.accounts.models import Roles
+
+    role = user.role
+    if role == Roles.STUDENT:
+        return getattr(user, 'student_profile', None)
+    if role in (Roles.TEACHER, Roles.HOD):
+        return getattr(user, 'teacher_profile', None)
+    if role in (Roles.COORDINATOR, Roles.ACCOUNTANT, Roles.ADMIN):
+        return getattr(user, 'staff_profile', None)
+    return None
+
+
 class IsOwnerOrRoles(BasePermission):
     """Mirrors the ownership-check idiom used by finance's challan_pdf and
     reports' progress_report views: either the requester IS the student who
@@ -42,14 +65,13 @@ class IsOwnerOrRoles(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         from apps.accounts.models import Roles
-        from apps.common.middleware import get_profile
 
         user = request.user
         if user.is_superuser or user.role in self.staff_roles:
             return True
         if user.role != Roles.STUDENT:
             return False
-        profile = get_profile(request)
+        profile = resolve_profile(user)
         if profile is None:
             return False
         return view.get_owner_profile_id(obj) == profile.pk

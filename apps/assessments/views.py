@@ -1,5 +1,3 @@
-from decimal import Decimal, InvalidOperation
-
 from django.contrib import messages
 from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -13,7 +11,7 @@ from apps.common.permissions import role_required
 
 from .forms import AssessmentCategoryForm, AssessmentForm
 from .models import Assessment, AssessmentCategory, CourseResult, Mark, SemesterGPA
-from .services import get_cgpa, get_student_course_overview
+from .services import enter_marks_bulk, get_cgpa, get_student_course_overview
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN)
 
@@ -113,26 +111,11 @@ def enter_marks(request, assessment_id):
     existing = {m.student_id: m.obtained_marks for m in assessment.marks.all()}
 
     if request.method == 'POST':
-        errors = []
-        for enrollment in enrollments:
-            student = enrollment.student
-            raw_value = request.POST.get(f'marks_{student.pk}', '').strip()
-            if raw_value == '':
-                Mark.objects.filter(assessment=assessment, student=student).delete()
-                continue
-            try:
-                value = Decimal(raw_value)
-            except InvalidOperation:
-                errors.append(f'Invalid marks for {student.roll_number}.')
-                continue
-            if value < 0 or value > assessment.total_marks:
-                errors.append(f'Marks for {student.roll_number} must be between 0 and {assessment.total_marks}.')
-                continue
-            Mark.objects.update_or_create(
-                assessment=assessment,
-                student=student,
-                defaults={'obtained_marks': value, 'graded_by': request.user},
-            )
+        raw_value_by_student_id = {
+            enrollment.student.pk: request.POST.get(f'marks_{enrollment.student.pk}', '')
+            for enrollment in enrollments
+        }
+        errors = enter_marks_bulk(assessment, raw_value_by_student_id, graded_by=request.user)
 
         if errors:
             for error in errors:

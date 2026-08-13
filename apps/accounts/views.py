@@ -5,7 +5,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import PasswordChangeView
-from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -26,6 +25,7 @@ from .forms import (
     TeacherProfileEditForm,
 )
 from .models import Department, Roles, StaffProfile, StudentProfile, TeacherProfile, User
+from .services import filter_people
 
 STAFF_MANAGEMENT_ROLES = (Roles.COORDINATOR, Roles.ADMIN)
 
@@ -104,34 +104,7 @@ def people_directory(request):
     department_filter = request.GET.get('department', '')
     query = request.GET.get('q', '').strip()
 
-    users = User.objects.select_related(
-        'student_profile__program__department', 'teacher_profile__department', 'staff_profile'
-    ).order_by('role', 'first_name')
-
-    if role_filter:
-        users = users.filter(role=role_filter)
-
-    if department_filter:
-        # A student's "department" is their program's department - StaffProfile
-        # has no department of its own (coordinator/accountant/admin are
-        # campus-wide, not tied to one).
-        users = users.filter(
-            Q(teacher_profile__department_id=department_filter)
-            | Q(student_profile__program__department_id=department_filter)
-        )
-
-    if query:
-        users = users.filter(
-            Q(first_name__icontains=query)
-            | Q(last_name__icontains=query)
-            | Q(username__icontains=query)
-            | Q(email__icontains=query)
-            | Q(student_profile__roll_number__icontains=query)
-            | Q(teacher_profile__employee_id__icontains=query)
-            | Q(staff_profile__employee_id__icontains=query)
-        )
-
-    users = users.distinct()
+    users = filter_people(role=role_filter, department=department_filter, query=query)
 
     return render(
         request,

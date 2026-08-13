@@ -8,7 +8,7 @@ from apps.common.permissions import role_required
 
 from .forms import LectureSessionForm
 from .models import AttendanceRecord, LectureSession
-from .services import get_student_course_stats, get_student_overview
+from .services import get_student_course_stats, get_student_overview, mark_attendance_bulk
 
 
 @role_required(Roles.TEACHER, Roles.HOD)
@@ -62,16 +62,11 @@ def mark_attendance(request, session_id):
     existing = {r.student_id: r.status for r in session.records.all()}
 
     if request.method == 'POST':
-        for enrollment in enrollments:
-            student = enrollment.student
-            status = request.POST.get(f'status_{student.pk}', AttendanceRecord.Status.PRESENT)
-            if status not in AttendanceRecord.Status.values:
-                status = AttendanceRecord.Status.PRESENT
-            AttendanceRecord.objects.update_or_create(
-                session=session,
-                student=student,
-                defaults={'status': status, 'marked_by': request.user},
-            )
+        status_by_student_id = {
+            enrollment.student.pk: request.POST.get(f'status_{enrollment.student.pk}', AttendanceRecord.Status.PRESENT)
+            for enrollment in enrollments
+        }
+        mark_attendance_bulk(session, status_by_student_id, marked_by=request.user)
         messages.success(request, 'Attendance saved.')
         return redirect('attendance:sessions', offering_id=session.course_offering_id)
 

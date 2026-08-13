@@ -8,6 +8,7 @@ from apps.common.permissions import role_required
 
 from .forms import CourseForm, CourseOfferingForm, EnrollmentForm, ProgramForm, SemesterForm
 from .models import Course, CourseOffering, Enrollment, Program, Semester
+from .services import bulk_enroll_by_offering, bulk_enroll_by_student
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN)
 
@@ -261,11 +262,8 @@ def enroll_by_offering(request):
         elif not student_ids:
             messages.error(request, 'Select at least one student to enroll.')
         else:
-            new_ids = student_ids - already_enrolled_ids
-            Enrollment.objects.bulk_create(
-                [Enrollment(student_id=sid, course_offering=selected_offering) for sid in new_ids]
-            )
-            messages.success(request, f'Enrolled {len(new_ids)} student(s) in {selected_offering}.')
+            enrolled_count = bulk_enroll_by_offering(selected_offering, student_ids)
+            messages.success(request, f'Enrolled {enrolled_count} student(s) in {selected_offering}.')
             return redirect(f'{request.path}?offering={selected_offering.id}')
 
     return render(request, 'academics/enroll_by_offering.html', {
@@ -299,11 +297,8 @@ def enroll_by_student(request):
         elif not offering_ids:
             messages.error(request, 'Select at least one course offering.')
         else:
-            new_ids = offering_ids - already_enrolled_ids
-            Enrollment.objects.bulk_create(
-                [Enrollment(student=selected_student, course_offering_id=oid) for oid in new_ids]
-            )
-            messages.success(request, f'Enrolled {selected_student} in {len(new_ids)} course(s).')
+            enrolled_count = bulk_enroll_by_student(selected_student, offering_ids)
+            messages.success(request, f'Enrolled {selected_student} in {enrolled_count} course(s).')
             return redirect(f'{request.path}?student={selected_student.id}')
 
     return render(request, 'academics/enroll_by_student.html', {

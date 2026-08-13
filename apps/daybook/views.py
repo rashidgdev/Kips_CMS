@@ -5,7 +5,6 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils import timezone
 
 from apps.accounts.models import Roles
 from apps.common.exports import export_excel, export_pdf
@@ -13,7 +12,7 @@ from apps.common.middleware import get_profile
 from apps.common.permissions import role_required
 
 from .models import DayBookEntry, MonthlyWorkloadSnapshot
-from .services import get_all_teachers_workload, get_teacher_workload
+from .services import generate_workload_snapshots, get_all_teachers_workload, get_teacher_workload, verify_day_book_entry
 
 
 @role_required(Roles.TEACHER, Roles.HOD)
@@ -48,10 +47,7 @@ def verify_queue(request):
 def verify_entry(request, entry_id):
     if request.method == 'POST':
         entry = get_object_or_404(DayBookEntry, pk=entry_id)
-        entry.verified_by = request.user
-        entry.verified_at = timezone.now()
-        entry.remarks = request.POST.get('remarks', '')
-        entry.save(update_fields=['verified_by', 'verified_at', 'remarks', 'updated_at'])
+        verify_day_book_entry(entry, verified_by=request.user, remarks=request.POST.get('remarks', ''))
         messages.success(request, 'Day book entry verified.')
     return redirect('daybook:verify-queue')
 
@@ -73,20 +69,7 @@ def workload_report(request):
     year, month = _parse_year_month(request)
 
     if request.method == 'POST':
-        rows = get_all_teachers_workload(year, month)
-        for row in rows:
-            MonthlyWorkloadSnapshot.objects.update_or_create(
-                teacher=row['teacher'],
-                year=year,
-                month=month,
-                defaults={
-                    'total_lectures': row['total_lectures'],
-                    'verified_lectures': row['verified_lectures'],
-                    'per_lecture_rate': row['per_lecture_rate'],
-                    'total_amount': row['total_amount'],
-                    'generated_by': request.user,
-                },
-            )
+        generate_workload_snapshots(year, month, generated_by=request.user)
         messages.success(request, f'Payroll snapshot generated for {year}-{month:02d}.')
         return redirect(f"{request.path}?month={year}-{month:02d}")
 

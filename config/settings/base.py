@@ -59,6 +59,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.common.middleware.JWTBridgeMiddleware',
     'apps.common.middleware.RoleContextMiddleware',
     'apps.common.middleware.ForcePasswordChangeMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -156,15 +157,24 @@ ATTENDANCE_SHORTAGE_THRESHOLD = env.int('ATTENDANCE_SHORTAGE_THRESHOLD', default
 
 # Django REST Framework
 #
-# Templates are being migrated to fetch their data from these APIs via JS
-# instead of receiving it through the Django view's template context (see
-# apps/common/api_permissions.py and apps/common/api_generic.py). Auth reuses
-# the same session cookie the HTML site already logs in with - no separate
-# API login exists yet. JSON-only rendering (no browsable API) keeps this
-# consistent with the fact that these endpoints are gated by the same
-# role-based rules as the HTML views, not meant as a public/explorable API.
+# These APIs serve two clients: the web templates (fetching data via JS
+# instead of Django view context - see apps/common/api_permissions.py and
+# apps/common/api_generic.py) and, going forward, a React Native mobile app.
+# The web client authenticates with the session cookie it already logs in
+# with; a native app can't rely on a browser's cookie jar, so JWT auth
+# (below) is also accepted - both work side by side, DRF tries each in
+# order. JSON-only rendering (no browsable API) keeps this consistent with
+# the fact that these endpoints are gated by the same role-based rules as
+# the HTML views, not meant as a public/explorable API.
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        # JWT listed first so a request with no credentials at all gets a
+        # clean 401 (JWTAuthentication supports the WWW-Authenticate
+        # challenge, SessionAuthentication doesn't) - lets the mobile app
+        # tell "not logged in" (401, refresh/redirect to login) apart from
+        # "wrong role" (403). Doesn't change how session auth itself works
+        # for the web client; only affects the fully-unauthenticated case.
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -176,4 +186,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'apps.common.api_metadata.StandardPagination',
     'PAGE_SIZE': 50,  # matches apps/common/crud.py CrudListView.paginate_by
     'DEFAULT_METADATA_CLASS': 'apps.common.api_metadata.ChoiceMetadata',
+}
+
+# JWT (for the mobile app - the web client doesn't use this, it authenticates
+# with its session cookie). Short-lived access token + longer-lived refresh
+# token, no rotation/blacklist - simple is enough for this app's needs today;
+# revoking a compromised refresh token can be added later if ever needed.
+from datetime import timedelta  # noqa: E402
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
+    'ROTATE_REFRESH_TOKENS': False,
+    'UPDATE_LAST_LOGIN': True,
 }

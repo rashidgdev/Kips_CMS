@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from apps.academics.models import Enrollment
 
@@ -84,6 +84,48 @@ def recalculate_semester_gpa(student, semester):
         semester=semester,
         defaults={'gpa': gpa, 'total_credit_hours': total_credit_hours},
     )
+
+
+def enter_marks_bulk(assessment, raw_value_by_student_id, graded_by):
+    """Upserts one Mark per enrolled student - shared by the Django view
+    (views.py::enter_marks) and the REST API, so the same validation rules
+    apply identically everywhere: a blank value deletes any existing Mark
+    for that student, a value outside [0, total_marks] or unparsable as a
+    Decimal is reported as an error and *that student's* row is left
+    untouched (a partial success - other valid rows in the same submission
+    still get saved). Every Mark save/delete triggers signals.py's
+    recalculate_course_result via post_save/post_delete, so CourseResult/
+    SemesterGPA are already correct by the time this returns.
+
+    `raw_value_by_student_id` is a {student_pk: raw_string_or_None} mapping
+    (None/'' means "clear this student's mark"). Returns a list of
+    human-readable error strings, empty if everything saved cleanly."""
+    enrollments = Enrollment.objects.filter(
+        course_offering=assessment.course_offering, status=Enrollment.Status.ENROLLED
+    ).select_related('student')
+
+    errors = []
+    for enrollment in enrollments:
+        student = enrollment.student
+        if student.pk not in raw_value_by_student_id:
+            continue
+        raw_value = (raw_value_by_student_id.get(student.pk) or '')
+        raw_value = str(raw_value).strip()
+        if raw_value == '':
+            Mark.objects.filter(assessment=assessment, student=student).delete()
+            continue
+        try:
+            value = Decimal(raw_value)
+        except InvalidOperation:
+            errors.append(f'Invalid marks for {student.roll_number}.')
+            continue
+        if value < 0 or value > assessment.total_marks:
+            errors.append(f'Marks for {student.roll_number} must be between 0 and {assessment.total_marks}.')
+            continue
+        Mark.objects.update_or_create(
+            assessment=assessment, student=student, defaults={'obtained_marks': value, 'graded_by': graded_by},
+        )
+    return errors
 
 
 def get_student_course_overview(student):
