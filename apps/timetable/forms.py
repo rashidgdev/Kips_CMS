@@ -41,6 +41,16 @@ class TimeSlotForm(TailwindFormMixin, forms.ModelForm):
         fields = ['day_of_week', 'start_time', 'end_time', 'label']
 
 
+class TimeSlotResizeForm(TailwindFormMixin, forms.Form):
+    """Not a ModelForm - resizing reflows every slot on the target day, not
+    just the one being edited, so services.resize_day_slots() handles the
+    actual field changes rather than a single model instance's save()."""
+
+    lecture_duration_minutes = forms.IntegerField(
+        label='New lecture duration (minutes)', min_value=5,
+    )
+
+
 MAX_BREAKS = 5
 
 

@@ -1,6 +1,7 @@
+from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 
 from apps.academics.models import CourseOffering, Enrollment, Semester
@@ -8,10 +9,10 @@ from apps.accounts.models import Roles
 from apps.common.api_generic import RoleScopedModelViewSet
 from apps.common.api_permissions import HasRole, resolve_profile
 
-from .forms import TimeSlotGeneratorForm, TimetableEntryForm
+from .forms import TimeSlotGeneratorForm, TimeSlotResizeForm, TimetableEntryForm
 from .models import Room, TimeSlot, TimetableEntry
 from .serializers import RoomSerializer, TimeSlotSerializer, TimetableEntrySerializer
-from .services import build_grid, check_conflicts, generate_time_slots
+from .services import auto_schedule_semester, build_grid, check_conflicts, generate_time_slots, resize_day_slots
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN)
 TEACHER_ROLES = (Roles.TEACHER, Roles.HOD)
@@ -27,6 +28,32 @@ class TimeSlotViewSet(RoleScopedModelViewSet):
     queryset = TimeSlot.objects.all()
     serializer_class = TimeSlotSerializer
     allowed_roles = STAFF_ROLES
+
+    @action(detail=False, methods=['post'], url_path='bulk-delete')
+    def bulk_delete(self, request):
+        pks = request.data.get('ids', [])
+        deleted, blocked = [], []
+        for slot in TimeSlot.objects.filter(pk__in=pks):
+            try:
+                slot.delete()
+                deleted.append(int(slot.pk))
+            except ProtectedError:
+                blocked.append({'id': slot.pk, 'label': str(slot)})
+        return Response({'deleted': deleted, 'blocked': blocked})
+
+    @action(detail=True, methods=['post'], url_path='resize')
+    def resize(self, request, pk=None):
+        slot = self.get_object()
+        form = TimeSlotResizeForm(request.data)
+        if not form.is_valid():
+            return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+        new_slots, remapped_count = resize_day_slots(
+            slot.day_of_week, form.cleaned_data['lecture_duration_minutes']
+        )
+        return Response({
+            'slots': TimeSlotSerializer(new_slots, many=True).data,
+            'remapped_entry_count': remapped_count,
+        })
 
 
 def _get_semester(semester_id):
@@ -119,6 +146,20 @@ def unschedule_entry_api(request, entry_id):
     entry = get_object_or_404(TimetableEntry, pk=entry_id)
     entry.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+@permission_classes([HasRole.for_roles(*STAFF_ROLES)])
+def auto_schedule_semester_api(request, semester_id):
+    semester = get_object_or_404(Semester, pk=semester_id)
+    created, unscheduled = auto_schedule_semester(semester, created_by=request.user)
+    return Response({
+        'created': TimetableEntrySerializer(created, many=True).data,
+        'unscheduled': [
+            {'course_offering_id': offering.pk, 'course_offering': str(offering), 'reason': reason}
+            for offering, reason in unscheduled
+        ],
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])

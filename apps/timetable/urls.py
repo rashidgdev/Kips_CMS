@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.semester_grid, name='grid'),
     path('semester/<int:semester_id>/', views.semester_grid, name='grid-for-semester'),
     path('semester/<int:semester_id>/schedule/', views.schedule_entry, name='schedule'),
+    path('semester/<int:semester_id>/auto-schedule/', views.auto_schedule_semester_view, name='auto-schedule'),
     path('semester/<int:semester_id>/pdf/', views.semester_grid_pdf, name='grid-pdf'),
     path('entries/<int:entry_id>/remove/', views.unschedule_entry, name='unschedule'),
     path('mine/', views.teacher_timetable, name='teacher-mine'),
@@ -22,7 +23,9 @@ urlpatterns = [
 
     path('timeslots/', views.TimeSlotListView.as_view(), name='timeslots'),
     path('timeslots/generate/', views.timeslot_generate, name='timeslot-generate'),
+    path('timeslots/bulk-delete/', views.timeslot_bulk_delete, name='timeslot-bulk-delete'),
     path('timeslots/new/', views.TimeSlotCreateView.as_view(), name='timeslot-new'),
     path('timeslots/<int:pk>/edit/', views.TimeSlotUpdateView.as_view(), name='timeslot-edit'),
     path('timeslots/<int:pk>/delete/', views.TimeSlotDeleteView.as_view(), name='timeslot-delete'),
+    path('timeslots/<int:pk>/resize/', views.timeslot_resize, name='timeslot-resize'),
 ]

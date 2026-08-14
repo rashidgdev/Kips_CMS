@@ -28,6 +28,13 @@
             {% icon 'plus' 'h-4 w-4' %}
             Schedule a Class
         </a>
+        <form method="post" action="{% url 'timetable:auto-schedule' semester.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-secondary">
+                {% icon 'clock' 'h-4 w-4' %}
+                Auto-Schedule Remaining
+            </button>
+        </form>
         {% include 'common/_export_buttons.html' with pdf_url=pdf_url %}
         {% endif %}
     </div>

@@ -1,4 +1,7 @@
+import datetime
+
 from django.contrib import messages
+from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 
@@ -8,10 +11,10 @@ from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudU
 from apps.common.middleware import get_profile
 from apps.common.permissions import role_required
 
-from .forms import RoomForm, TimeSlotForm, TimeSlotGeneratorForm, TimetableEntryForm
+from .forms import RoomForm, TimeSlotForm, TimeSlotGeneratorForm, TimeSlotResizeForm, TimetableEntryForm
 from .grid_pdf import render_timetable_grid_pdf
 from .models import Room, TimeSlot, TimetableEntry
-from .services import build_grid, check_conflicts, generate_time_slots
+from .services import auto_schedule_semester, build_grid, check_conflicts, generate_time_slots, resize_day_slots
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN)
 
@@ -64,6 +67,8 @@ class TimeSlotListView(CrudListView):
     add_url_name = 'timetable:timeslot-new'
     edit_url_name = 'timetable:timeslot-edit'
     delete_url_name = 'timetable:timeslot-delete'
+    bulk_delete_url_name = 'timetable:timeslot-bulk-delete'
+    row_actions = [{'url_name': 'timetable:timeslot-resize', 'label': 'Resize'}]
     extra_actions = [{'url_name': 'timetable:timeslot-generate', 'label': 'Generate Time Slots', 'icon': 'clock'}]
 
 
@@ -90,6 +95,67 @@ class TimeSlotDeleteView(CrudDeleteView):
     allowed_roles = STAFF_ROLES
     success_url = reverse_lazy('timetable:timeslots')
     success_message = 'Time slot deleted.'
+
+
+@role_required(*STAFF_ROLES)
+def timeslot_bulk_delete(request):
+    if request.method != 'POST':
+        return redirect('timetable:timeslots')
+
+    pks = request.POST.getlist('pks')
+    if not pks:
+        messages.error(request, 'No time slots were selected.')
+        return redirect('timetable:timeslots')
+
+    deleted_count = 0
+    blocked = []
+    for slot in TimeSlot.objects.filter(pk__in=pks):
+        try:
+            slot.delete()
+            deleted_count += 1
+        except ProtectedError:
+            blocked.append(str(slot))
+
+    if deleted_count:
+        messages.success(request, f'{deleted_count} time slot(s) deleted.')
+    if blocked:
+        messages.warning(
+            request,
+            f'{len(blocked)} time slot(s) are still in use by scheduled classes and were not deleted: '
+            + ', '.join(blocked),
+        )
+    return redirect('timetable:timeslots')
+
+
+@role_required(*STAFF_ROLES)
+def timeslot_resize(request, pk):
+    slot = get_object_or_404(TimeSlot, pk=pk)
+    current_minutes = int(
+        (datetime.datetime.combine(datetime.date.today(), slot.end_time)
+         - datetime.datetime.combine(datetime.date.today(), slot.start_time)).total_seconds() // 60
+    )
+
+    if request.method == 'POST':
+        form = TimeSlotResizeForm(request.POST)
+        if form.is_valid():
+            new_slots, remapped_count = resize_day_slots(
+                slot.day_of_week, form.cleaned_data['lecture_duration_minutes']
+            )
+            messages.success(
+                request,
+                f'{slot.get_day_of_week_display()} slots resized to '
+                f'{form.cleaned_data["lecture_duration_minutes"]} minutes each '
+                f'({len(new_slots)} slot(s), {remapped_count} scheduled class(es) moved to their new slot).',
+            )
+            return redirect('timetable:timeslots')
+    else:
+        form = TimeSlotResizeForm(initial={'lecture_duration_minutes': current_minutes})
+
+    return render(request, 'common/generic_form.html', {
+        'form': form,
+        'page_title': f'Resize {slot.get_day_of_week_display()} Slots',
+        'cancel_url': reverse('timetable:timeslots'),
+    })
 
 
 @role_required(*STAFF_ROLES)
@@ -199,6 +265,25 @@ def unschedule_entry(request, entry_id):
         entry.delete()
         messages.success(request, 'Class removed from timetable.')
     return redirect('timetable:grid-for-semester', semester_id=semester_id)
+
+
+@role_required(Roles.COORDINATOR, Roles.ADMIN)
+def auto_schedule_semester_view(request, semester_id):
+    semester = get_object_or_404(Semester, pk=semester_id)
+    if request.method == 'POST':
+        created, unscheduled = auto_schedule_semester(semester, created_by=request.user)
+        if created:
+            messages.success(request, f'{len(created)} class(es) auto-scheduled.')
+        if unscheduled:
+            names = ', '.join(str(offering) for offering, _reason in unscheduled)
+            messages.warning(
+                request,
+                f'{len(unscheduled)} class(es) could not be auto-scheduled - no free room/time-slot '
+                f'combination was available: {names}. Add more rooms or time slots, or schedule them manually.',
+            )
+        if not created and not unscheduled:
+            messages.info(request, 'Nothing to schedule - every course offering already has its required classes.')
+    return redirect('timetable:grid-for-semester', semester_id=semester.pk)
 
 
 def _teacher_current_entries(profile):

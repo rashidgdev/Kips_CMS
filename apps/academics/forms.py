@@ -20,7 +20,10 @@ class SemesterForm(TailwindFormMixin, forms.ModelForm):
 class CourseForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
         model = Course
-        fields = ['program', 'code', 'title', 'credit_hours', 'semester_number', 'course_type', 'is_active']
+        fields = [
+            'program', 'code', 'title', 'credit_hours', 'sessions_per_week',
+            'semester_number', 'course_type', 'is_active',
+        ]
 
 
 class CourseOfferingForm(TailwindFormMixin, forms.ModelForm):

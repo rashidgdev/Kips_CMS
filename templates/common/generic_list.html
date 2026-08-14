@@ -20,12 +20,41 @@
     </div>
 </div>
 
+{% if filter_options %}
+<form method="get" class="card mb-4 flex flex-wrap items-end gap-3 page-enter">
+    {% for filter in filter_options %}
+    <div>
+        <label class="mb-1 block text-xs font-medium text-gray-500">{{ filter.label }}</label>
+        <select name="{{ filter.name }}" onchange="this.form.submit()" class="input-field">
+            <option value="">All</option>
+            {% for value, display in filter.choices %}
+                <option value="{{ value }}" {% if filter.selected == value|stringformat:"s" %}selected{% endif %}>{{ display }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endfor %}
+    {% if request.GET %}<a href="{{ request.path }}" class="link mb-2 text-sm">Clear filters</a>{% endif %}
+</form>
+{% endif %}
+
 <div class="card page-enter">
     {% if object_list %}
+    <form method="post" action="{% if bulk_delete_url_name %}{% url bulk_delete_url_name %}{% endif %}">
+        {% csrf_token %}
+        {% if bulk_delete_url_name %}
+        <div class="mb-3 flex items-center justify-between">
+            <label class="flex items-center gap-2 text-sm text-gray-600">
+                <input type="checkbox" onclick="this.closest('form').querySelectorAll('input[name=pks]').forEach(cb => cb.checked = this.checked)">
+                Select all
+            </label>
+            <button type="submit" class="btn-secondary" onclick="return confirm('Delete the selected records?')">Delete Selected</button>
+        </div>
+        {% endif %}
     <div class="table-wrap">
     <table class="table-modern">
         <thead>
             <tr>
+                {% if bulk_delete_url_name %}<th></th>{% endif %}
                 {% for attr, label in list_display %}<th>{{ label }}</th>{% endfor %}
                 <th></th>
             </tr>
@@ -33,9 +62,13 @@
         <tbody>
             {% for obj in object_list %}
             <tr>
+                {% if bulk_delete_url_name %}<td><input type="checkbox" name="pks" value="{{ obj.pk }}"></td>{% endif %}
                 {% for attr, label in list_display %}<td>{{ obj|get_attr:attr }}</td>{% endfor %}
                 <td class="whitespace-nowrap">
                     {% if edit_url_name %}<a href="{% url edit_url_name obj.pk %}" class="link">Edit</a>{% endif %}
+                    {% for row_action in row_actions %}
+                        <a href="{% url row_action.url_name obj.pk %}" class="link ml-3">{{ row_action.label }}</a>
+                    {% endfor %}
                     {% if delete_url_name %}<a href="{% url delete_url_name obj.pk %}" class="link-danger ml-3">Delete</a>{% endif %}
                 </td>
             </tr>
@@ -43,6 +76,7 @@
         </tbody>
     </table>
     </div>
+    </form>
     {% if is_paginated %}
     <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 text-sm text-gray-500">
         {% if page_obj.has_previous %}

@@ -1,8 +1,12 @@
 import datetime
+from collections import Counter
 
+from django.db import transaction
 from django.db.models import Q
 
-from .models import TimeSlot, TimetableEntry
+from apps.academics.models import CourseOffering
+
+from .models import Room, TimeSlot, TimetableEntry
 
 
 def check_conflicts(course_offering, room, time_slot, exclude_entry_id=None):
@@ -139,3 +143,106 @@ def build_grid(entries):
                 )
 
     return {'days': days, 'rows': rows}
+
+
+def auto_schedule_semester(semester, created_by=None):
+    """Fills in a room + time slot for every CourseOffering in `semester`
+    that doesn't yet have enough entries to match its course's
+    `sessions_per_week`, picking the first conflict-free combination for
+    each one instead of the admin placing every class by hand. Reuses
+    `check_conflicts` for every candidate so this can never create a clash
+    that `check_conflicts` wouldn't also catch. Classes are spread across
+    the week by preferring, for each teacher, the day they currently have
+    the fewest classes on, rather than piling everything onto one day.
+    Never raises - any session with no free combination is reported back
+    instead so the admin can resolve it manually. Returns
+    (created: list[TimetableEntry], unscheduled: list[(CourseOffering, str)])."""
+    offerings = list(
+        CourseOffering.objects.filter(semester=semester, is_active=True)
+        .select_related('course', 'teacher')
+    )
+    all_slots = list(TimeSlot.objects.order_by('day_of_week', 'start_time'))
+    all_rooms = list(Room.objects.all())
+
+    concurrent_semesters = Q(course_offering__semester__is_current=True) | Q(course_offering__semester=semester)
+    existing = TimetableEntry.objects.filter(concurrent_semesters).select_related('course_offering', 'time_slot')
+    teacher_day_load = Counter()
+    for entry in existing:
+        teacher_day_load[(entry.course_offering.teacher_id, entry.time_slot.day_of_week)] += 1
+
+    created = []
+    unscheduled = []
+
+    for offering in offerings:
+        already = TimetableEntry.objects.filter(course_offering=offering).count()
+        needed = max(0, offering.course.sessions_per_week - already)
+        for _ in range(needed):
+            ranked_slots = sorted(
+                all_slots,
+                key=lambda s: (teacher_day_load[(offering.teacher_id, s.day_of_week)], s.day_of_week, s.start_time),
+            )
+            wants_lab = offering.course.course_type == 'lab'
+            ranked_rooms = sorted(
+                all_rooms,
+                key=lambda r: 0 if (wants_lab == (r.room_type == Room.RoomType.LAB)) else 1,
+            )
+            placed = False
+            for slot in ranked_slots:
+                for room in ranked_rooms:
+                    if not check_conflicts(offering, room, slot):
+                        entry = TimetableEntry.objects.create(
+                            course_offering=offering, room=room, time_slot=slot, created_by=created_by
+                        )
+                        created.append(entry)
+                        teacher_day_load[(offering.teacher_id, slot.day_of_week)] += 1
+                        placed = True
+                        break
+                if placed:
+                    break
+            if not placed:
+                unscheduled.append((offering, 'No free room/time-slot combination without a clash.'))
+
+    return created, unscheduled
+
+
+def resize_day_slots(day_of_week, new_lecture_duration_minutes):
+    """Changes every lecture slot on `day_of_week` to be exactly
+    `new_lecture_duration_minutes` long, keeping the first slot's start time
+    and every existing break's position/length untouched, and moves any
+    already-scheduled classes onto the new slot times so nothing has to be
+    re-scheduled by hand afterwards. Returns
+    (new_slots: list[TimeSlot], remapped_entry_count: int)."""
+    today = datetime.date.today()
+    old_slots = list(TimeSlot.objects.filter(day_of_week=day_of_week).order_by('start_time'))
+    if not old_slots:
+        return [], 0
+
+    new_slots = []
+    remapped_count = 0
+    with transaction.atomic():
+        current_start = old_slots[0].start_time
+        for index, old_slot in enumerate(old_slots):
+            current_end = (
+                datetime.datetime.combine(today, current_start)
+                + datetime.timedelta(minutes=new_lecture_duration_minutes)
+            ).time()
+            new_slot, _ = TimeSlot.objects.get_or_create(
+                day_of_week=day_of_week, start_time=current_start, end_time=current_end,
+                defaults={'label': old_slot.label},
+            )
+            new_slots.append(new_slot)
+
+            if new_slot.pk != old_slot.pk:
+                remapped_count += TimetableEntry.objects.filter(time_slot=old_slot).update(time_slot=new_slot)
+
+            if index + 1 < len(old_slots):
+                gap_minutes = _minutes_between(old_slot.end_time, old_slots[index + 1].start_time)
+                next_start_dt = datetime.datetime.combine(today, current_end) + datetime.timedelta(minutes=gap_minutes)
+                current_start = next_start_dt.time()
+
+        new_ids = {slot.pk for slot in new_slots}
+        for old_slot in old_slots:
+            if old_slot.pk not in new_ids:
+                old_slot.delete()
+
+    return new_slots, remapped_count

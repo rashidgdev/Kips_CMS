@@ -14,6 +14,9 @@ class Course(TimeStampedModel):
     code = models.CharField(max_length=20, unique=True)
     title = models.CharField(max_length=200)
     credit_hours = models.PositiveSmallIntegerField(default=3)
+    sessions_per_week = models.PositiveSmallIntegerField(
+        default=1, help_text='Timetable slots needed per week for this course.'
+    )
     semester_number = models.PositiveSmallIntegerField(
         help_text='Position of this course in the program curriculum (1-based).'
     )

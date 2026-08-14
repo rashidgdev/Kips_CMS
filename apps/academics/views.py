@@ -103,12 +103,16 @@ class CourseListView(CrudListView):
     allowed_roles = STAFF_ROLES
     page_title = 'Courses'
     list_display = [
-        ('code', 'Code'), ('title', 'Title'), ('program', 'Program'),
+        ('code', 'Code'), ('title', 'Title'), ('program', 'Program'), ('semester_number', 'Sem #'),
         ('credit_hours', 'Credit Hrs'), ('course_type', 'Type'), ('is_active', 'Active'),
     ]
     add_url_name = 'academics:course-new'
     edit_url_name = 'academics:course-edit'
     delete_url_name = 'academics:course-delete'
+    filter_fields = [
+        ('program', 'Program', Program.objects.all()),
+        ('semester_number', 'Semester #', None),
+    ]
 
     def get_queryset(self):
         return super().get_queryset().select_related('program')
@@ -164,10 +168,17 @@ class CourseOfferingCreateView(CrudCreateView):
     page_title = 'Assign Course to Faculty'
     success_url = reverse_lazy('academics:offerings')
     success_message = 'Course assigned to faculty.'
+    template_name = 'academics/courseoffering_form.html'
 
     def form_valid(self, form):
         form.instance.assigned_by = self.request.user
         return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['programs'] = Program.objects.all()
+        context['selected_program_id'] = self.request.POST.get('program_filter', '')
+        return context
 
 
 class CourseOfferingUpdateView(CrudUpdateView):
@@ -177,6 +188,15 @@ class CourseOfferingUpdateView(CrudUpdateView):
     page_title = 'Edit Faculty Assignment'
     success_url = reverse_lazy('academics:offerings')
     success_message = 'Faculty assignment updated.'
+    template_name = 'academics/courseoffering_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['programs'] = Program.objects.all()
+        context['selected_program_id'] = (
+            self.request.POST.get('program_filter') or str(self.object.course.program_id)
+        )
+        return context
 
 
 class CourseOfferingDeleteView(CrudDeleteView):

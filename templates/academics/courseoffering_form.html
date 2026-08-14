@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">{{ page_title }}</h1>
+<p class="mb-6 text-sm text-gray-500">Pick a program first to narrow the Course and Semester lists below - courses from every program aren't mixed together.</p>
+
+<div class="card page-enter max-w-lg">
+    <form method="post">
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}
+            <p class="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                {% icon 'warning' 'h-4 w-4 shrink-0' %}{{ error }}
+            </p>
+        {% endfor %}
+        <div class="space-y-4">
+            <div>
+                <label for="program-filter" class="field-label">Filter by Program</label>
+                <select id="program-filter" name="program_filter" class="input-field">
+                    <option value="">-- All programs --</option>
+                    {% for program in programs %}
+                        <option value="{{ program.pk }}" {% if program.pk|stringformat:"s" == selected_program_id|stringformat:"s" %}selected{% endif %}>{{ program }}</option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1.5 text-xs text-gray-400">Narrows the lists below - not saved itself.</p>
+            </div>
+
+            <div>
+                <label for="id_course" class="field-label">Course</label>
+                <select id="id_course" name="course" class="input-field">
+                    <option value="">-- Select a course --</option>
+                    {% for course in form.fields.course.queryset %}
+                        <option value="{{ course.pk }}" data-program="{{ course.program_id }}"
+                            {% if form.course.value|stringformat:"s" == course.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ course }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% for error in form.course.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+
+            <div>
+                <label for="id_semester" class="field-label">Semester</label>
+                <select id="id_semester" name="semester" class="input-field">
+                    <option value="">-- Select a semester --</option>
+                    {% for semester in form.fields.semester.queryset %}
+                        <option value="{{ semester.pk }}" data-program="{{ semester.program_id }}"
+                            {% if form.semester.value|stringformat:"s" == semester.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ semester }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% for error in form.semester.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+
+            {% for field in form %}
+                {% if field.name != 'course' and field.name != 'semester' %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="field-label">
+                        {{ field.label }}
+                        {% if not field.field.required %}<span class="font-normal text-gray-400">(optional)</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ field.help_text }}</p>{% endif %}
+                    {% for error in field.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="mt-6 flex items-center gap-3 border-t border-gray-100 pt-5">
+            <button type="submit" class="btn-primary">Save</button>
+            <a href="{{ cancel_url }}" class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    var programFilter = document.getElementById('program-filter');
+    var courseSelect = document.getElementById('id_course');
+    var semesterSelect = document.getElementById('id_semester');
+
+    function applyFilter() {
+        var programId = programFilter.value;
+        [courseSelect, semesterSelect].forEach(function (select) {
+            var hasSelectedVisible = false;
+            Array.from(select.options).forEach(function (option) {
+                if (!option.value) return;
+                var matches = !programId || option.dataset.program === programId;
+                option.hidden = !matches;
+                if (matches && option.selected) hasSelectedVisible = true;
+            });
+            if (!hasSelectedVisible) select.value = '';
+        });
+    }
+
+    programFilter.addEventListener('change', applyFilter);
+    applyFilter();
+})();
+</script>
+{% endblock %}

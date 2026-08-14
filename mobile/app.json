@@ -11,6 +11,7 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.kipscollege.kasur.cms",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -40,11 +41,26 @@
           "photosPermission": "KIPS CMS uses your photo library to set a profile picture.",
           "cameraPermission": "KIPS CMS uses your camera to take a profile picture."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "512458cf-ea42-474a-ac4f-33b46d6debd5"
+      }
+    },
+    "owner": "rashidgazzi"
   }
 }
