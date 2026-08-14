@@ -15,8 +15,11 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from apps.common.exports import LETTERHEAD_TOP_MARGIN_MM, draw_pdf_letterhead
+
 PAGE_SIZE = landscape(A4)
 MARGIN = 10 * mm
+TOP_MARGIN = LETTERHEAD_TOP_MARGIN_MM * mm
 TIME_COL_WIDTH = 30 * mm
 
 _styles = getSampleStyleSheet()
@@ -46,8 +49,11 @@ def render_timetable_grid_pdf(grid, title, subtitle=''):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer, pagesize=PAGE_SIZE, title=title,
-        leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN,
+        leftMargin=MARGIN, rightMargin=MARGIN, topMargin=TOP_MARGIN, bottomMargin=MARGIN,
     )
+
+    def _letterhead(c, doc):
+        draw_pdf_letterhead(c, doc.pagesize[0], doc.pagesize[1])
 
     elements = [Paragraph(title, _styles['Title'])]
     if subtitle:
@@ -88,7 +94,7 @@ def render_timetable_grid_pdf(grid, title, subtitle=''):
     table.setStyle(TableStyle(style_commands))
     elements.append(table)
 
-    doc.build(elements)
+    doc.build(elements, onFirstPage=_letterhead, onLaterPages=_letterhead)
     buffer.seek(0)
 
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
