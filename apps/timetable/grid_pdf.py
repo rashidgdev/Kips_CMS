@@ -25,7 +25,7 @@ TIME_COL_WIDTH = 30 * mm
 _styles = getSampleStyleSheet()
 _header_style = ParagraphStyle('GridHeader', parent=_styles['Normal'], fontSize=8, textColor=colors.white, fontName='Helvetica-Bold')
 _time_style = ParagraphStyle('GridTime', parent=_styles['Normal'], fontSize=7.5, textColor=colors.HexColor('#4B5563'), fontName='Helvetica-Bold', leading=9)
-_entry_code_style = ParagraphStyle('GridEntryCode', parent=_styles['Normal'], fontSize=8, textColor=colors.HexColor('#1E3A8A'), fontName='Helvetica-Bold', leading=9.5)
+_entry_name_style = ParagraphStyle('GridEntryName', parent=_styles['Normal'], fontSize=7.5, textColor=colors.HexColor('#1E3A8A'), fontName='Helvetica-Bold', leading=9)
 _entry_detail_style = ParagraphStyle('GridEntryDetail', parent=_styles['Normal'], fontSize=6.5, textColor=colors.HexColor('#374151'), leading=8)
 _empty_style = ParagraphStyle('GridEmpty', parent=_styles['Normal'], fontSize=8, textColor=colors.HexColor('#D1D5DB'), alignment=1)
 _break_style = ParagraphStyle('GridBreak', parent=_styles['Normal'], fontSize=8, textColor=colors.HexColor('#92400E'), fontName='Helvetica-Bold', alignment=1)
@@ -39,7 +39,7 @@ def _period_cell(entry):
     if entry is None:
         return Paragraph('&ndash;', _empty_style)
     return [
-        Paragraph(entry.course_offering.course.code, _entry_code_style),
+        Paragraph(entry.course_offering.course.title, _entry_name_style),
         Paragraph(str(entry.room), _entry_detail_style),
         Paragraph(entry.course_offering.teacher.user.get_full_name(), _entry_detail_style),
     ]

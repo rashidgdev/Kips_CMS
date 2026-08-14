@@ -29,7 +29,7 @@
             <td class="min-w-[9rem] align-top">
                 {% if cell.entry %}
                     <div class="animate-scale-in rounded-lg border border-blue-100 bg-blue-50/70 p-2.5 transition-shadow hover:shadow-sm">
-                        <div class="font-semibold text-blue-900">{{ cell.entry.course_offering.course.code }}</div>
+                        <div class="text-sm font-medium leading-tight text-blue-900">{{ cell.entry.course_offering.course.title }}</div>
                         <div class="mt-0.5 text-xs text-blue-800/70">{{ cell.entry.room }}</div>
                         <div class="text-xs text-blue-800/70">{{ cell.entry.course_offering.teacher.user.get_full_name }}</div>
                         {% if editable %}
