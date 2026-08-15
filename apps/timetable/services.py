@@ -116,9 +116,14 @@ def build_grid(entries):
             seen.add(key)
             periods.append({'start_time': slot.start_time, 'end_time': slot.end_time, 'label': slot.label})
 
-    entry_map = {
-        (e.time_slot.day_of_week, e.time_slot.start_time, e.time_slot.end_time): e for e in entries
-    }
+    # A key can hold more than one entry - parallel sections of the same
+    # semester routinely have a class in the same slot at once (different
+    # room/teacher), so this must never collapse to a single value or one
+    # section's class silently disappears behind another's.
+    entry_map = {}
+    for e in entries:
+        key = (e.time_slot.day_of_week, e.time_slot.start_time, e.time_slot.end_time)
+        entry_map.setdefault(key, []).append(e)
 
     days = TimeSlot.DayOfWeek.choices
     rows = []
@@ -126,7 +131,7 @@ def build_grid(entries):
         cells = []
         for day_value, day_label in days:
             key = (day_value, period['start_time'], period['end_time'])
-            cells.append({'day': day_value, 'day_label': day_label, 'entry': entry_map.get(key)})
+            cells.append({'day': day_value, 'day_label': day_label, 'entries': entry_map.get(key, [])})
         rows.append({'type': 'period', 'period': period, 'cells': cells})
 
         if index + 1 < len(periods):

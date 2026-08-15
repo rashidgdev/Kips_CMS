@@ -35,14 +35,22 @@ def _fmt12(value):
     return value.strftime('%I:%M %p').lstrip('0')
 
 
-def _period_cell(entry):
-    if entry is None:
+def _period_cell(entries):
+    if not entries:
         return Paragraph('&ndash;', _empty_style)
-    return [
-        Paragraph(entry.course_offering.course.title, _entry_name_style),
-        Paragraph(str(entry.room), _entry_detail_style),
-        Paragraph(entry.course_offering.teacher.user.get_full_name(), _entry_detail_style),
-    ]
+    blocks = []
+    show_section = len(entries) > 1
+    for index, entry in enumerate(entries):
+        if index > 0:
+            blocks.append(Spacer(1, 3))
+        if show_section:
+            blocks.append(Paragraph(f'Section {entry.course_offering.section}', _entry_detail_style))
+        blocks.extend([
+            Paragraph(entry.course_offering.course.title, _entry_name_style),
+            Paragraph(str(entry.room), _entry_detail_style),
+            Paragraph(entry.course_offering.teacher.user.get_full_name(), _entry_detail_style),
+        ])
+    return blocks
 
 
 def render_timetable_grid_pdf(grid, title, subtitle=''):
@@ -85,7 +93,7 @@ def render_timetable_grid_pdf(grid, title, subtitle=''):
             style_commands.append(('BACKGROUND', (0, row_index), (-1, row_index), colors.HexColor('#FFFBEB')))
         else:
             time_label = Paragraph(f"{row['period']['label']}<br/>{_fmt12(row['period']['start_time'])}-{_fmt12(row['period']['end_time'])}", _time_style)
-            cells = [time_label] + [_period_cell(cell['entry']) for cell in row['cells']]
+            cells = [time_label] + [_period_cell(cell['entries']) for cell in row['cells']]
             data.append(cells)
             style_commands.append(('BACKGROUND', (0, row_index), (0, row_index), colors.HexColor('#F9FAFB')))
         row_index += 1

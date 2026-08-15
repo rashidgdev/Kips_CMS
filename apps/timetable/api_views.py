@@ -65,8 +65,15 @@ def _get_semester(semester_id):
 
 def _serialize_grid(grid):
     """JSON-friendly reshape of build_grid()'s output: period rows carry a
-    list of {day, entry_id, course, teacher, room} cells instead of Django
-    model instances, break rows pass through as-is."""
+    list of {day, entry_id, course, teacher, room, entries} cells instead of
+    Django model instances, break rows pass through as-is.
+
+    A cell's `entry_id`/`course`/`teacher`/`room` describe only the FIRST
+    entry in that slot, kept for backwards compatibility with mobile app
+    builds already in the field that only read those singular fields - the
+    full list (every entry in that slot, e.g. when two sections both have a
+    class at the same time) is in `entries`; a future mobile build can
+    switch to reading that instead."""
     rows = []
     for row in grid['rows']:
         if row['type'] == 'break':
@@ -77,14 +84,25 @@ def _serialize_grid(grid):
             continue
         cells = []
         for cell in row['cells']:
-            entry = cell['entry']
+            entries = cell['entries']
+            first = entries[0] if entries else None
             cells.append({
                 'day': cell['day'],
                 'day_label': cell['day_label'],
-                'entry_id': entry.pk if entry else None,
-                'course': str(entry.course_offering.course) if entry else None,
-                'teacher': str(entry.course_offering.teacher) if entry else None,
-                'room': str(entry.room) if entry else None,
+                'entry_id': first.pk if first else None,
+                'course': str(first.course_offering.course) if first else None,
+                'teacher': str(first.course_offering.teacher) if first else None,
+                'room': str(first.room) if first else None,
+                'entries': [
+                    {
+                        'entry_id': e.pk,
+                        'course': str(e.course_offering.course),
+                        'teacher': str(e.course_offering.teacher),
+                        'room': str(e.room),
+                        'section': e.course_offering.section,
+                    }
+                    for e in entries
+                ],
             })
         rows.append({
             'type': 'period',

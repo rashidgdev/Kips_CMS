@@ -201,9 +201,21 @@ def semester_grid(request, semester_id=None):
     semesters = Semester.objects.select_related('program').order_by('-is_current', 'program__name', '-number')
 
     grid = {'days': [], 'rows': []}
+    sections = []
+    selected_section = request.GET.get('section', '')
+    pdf_url = None
     if semester:
+        sections = list(
+            CourseOffering.objects.filter(semester=semester)
+            .exclude(section='').values_list('section', flat=True).distinct().order_by('section')
+        )
         entries = TimetableEntry.objects.filter(course_offering__semester=semester)
+        if selected_section:
+            entries = entries.filter(course_offering__section=selected_section)
         grid = build_grid(entries)
+        pdf_url = reverse('timetable:grid-pdf', args=[semester.pk])
+        if selected_section:
+            pdf_url += f'?section={selected_section}'
 
     return render(
         request,
@@ -212,7 +224,9 @@ def semester_grid(request, semester_id=None):
             'semester': semester,
             'semesters': semesters,
             'grid': grid,
-            'pdf_url': reverse('timetable:grid-pdf', args=[semester.pk]) if semester else None,
+            'sections': sections,
+            'selected_section': selected_section,
+            'pdf_url': pdf_url,
         },
     )
 
@@ -221,8 +235,13 @@ def semester_grid(request, semester_id=None):
 def semester_grid_pdf(request, semester_id):
     semester = get_object_or_404(Semester, pk=semester_id)
     entries = TimetableEntry.objects.filter(course_offering__semester=semester)
+    selected_section = request.GET.get('section', '')
+    subtitle = str(semester)
+    if selected_section:
+        entries = entries.filter(course_offering__section=selected_section)
+        subtitle += f' - Section {selected_section}'
     grid = build_grid(entries)
-    return render_timetable_grid_pdf(grid, 'Timetable', subtitle=str(semester))
+    return render_timetable_grid_pdf(grid, 'Timetable', subtitle=subtitle)
 
 
 @role_required(Roles.COORDINATOR, Roles.ADMIN)

@@ -23,6 +23,17 @@
                 </select>
             </div>
         </form>
+        {% if semester and sections|length > 1 %}
+        <div>
+            <label for="section-select" class="field-label">Section</label>
+            <select id="section-select" onchange="window.location.href='{% url 'timetable:grid-for-semester' semester.pk %}?section=' + this.value" class="input-field">
+                <option value="" {% if not selected_section %}selected{% endif %}>All Sections</option>
+                {% for section in sections %}
+                    <option value="{{ section }}" {% if selected_section == section %}selected{% endif %}>Section {{ section }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
         {% if semester %}
         <a href="{% url 'timetable:schedule' semester.pk %}" class="btn-primary">
             {% icon 'plus' 'h-4 w-4' %}

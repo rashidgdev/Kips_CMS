@@ -27,17 +27,24 @@
             </td>
             {% for cell in row.cells %}
             <td class="min-w-[9rem] align-top">
-                {% if cell.entry %}
-                    <div class="animate-scale-in rounded-lg border border-blue-100 bg-blue-50/70 p-2.5 transition-shadow hover:shadow-sm">
-                        <div class="text-sm font-medium leading-tight text-blue-900">{{ cell.entry.course_offering.course.title }}</div>
-                        <div class="mt-0.5 text-xs text-blue-800/70">{{ cell.entry.room }}</div>
-                        <div class="text-xs text-blue-800/70">{{ cell.entry.course_offering.teacher.user.get_full_name }}</div>
-                        {% if editable %}
-                        <form method="post" action="{% url 'timetable:unschedule' cell.entry.pk %}" class="mt-1.5">
-                            {% csrf_token %}
-                            <button type="submit" class="link-danger text-xs">Remove</button>
-                        </form>
-                        {% endif %}
+                {% if cell.entries %}
+                    <div class="space-y-1.5">
+                    {% for entry in cell.entries %}
+                        <div class="animate-scale-in rounded-lg border border-blue-100 bg-blue-50/70 p-2.5 transition-shadow hover:shadow-sm">
+                            {% if cell.entries|length > 1 %}
+                                <div class="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-500">Section {{ entry.course_offering.section }}</div>
+                            {% endif %}
+                            <div class="text-sm font-medium leading-tight text-blue-900">{{ entry.course_offering.course.title }}</div>
+                            <div class="mt-0.5 text-xs text-blue-800/70">{{ entry.room }}</div>
+                            <div class="text-xs text-blue-800/70">{{ entry.course_offering.teacher.user.get_full_name }}</div>
+                            {% if editable %}
+                            <form method="post" action="{% url 'timetable:unschedule' entry.pk %}" class="mt-1.5">
+                                {% csrf_token %}
+                                <button type="submit" class="link-danger text-xs">Remove</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                     </div>
                 {% else %}
                     <div class="flex h-full min-h-[3.5rem] items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-300">&ndash;</div>
