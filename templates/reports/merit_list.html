@@ -42,20 +42,23 @@
             </thead>
             <tbody>
                 {% for row in rows %}
+                {% with rank=rows.start_index|add:forloop.counter0 %}
                 <tr>
                     <td>
-                        {% if forloop.counter <= 3 %}<span class="badge-yellow">#{{ forloop.counter }}</span>
-                        {% else %}{{ forloop.counter }}{% endif %}
+                        {% if rank <= 3 %}<span class="badge-yellow">#{{ rank }}</span>
+                        {% else %}{{ rank }}{% endif %}
                     </td>
                     <td>{{ row.student.roll_number }}</td>
                     <td class="font-medium text-gray-900">{{ row.student.user.get_full_name }}</td>
                     <td class="font-semibold text-gray-900">{{ row.gpa }}</td>
                     <td>{{ row.total_credit_hours }}</td>
                 </tr>
+                {% endwith %}
                 {% endfor %}
             </tbody>
         </table>
         </div>
+        {% include 'common/_pagination.html' %}
     {% else %}
         <p class="text-sm text-gray-500">No graded results for this semester yet.</p>
     {% endif %}

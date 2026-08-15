@@ -31,8 +31,12 @@
 {% if selected_offering %}
 <div class="card page-enter">
     <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-900">Students in {{ selected_offering.course.program }}</h2>
-        <span class="text-sm text-gray-500">{{ already_enrolled_ids|length }} already enrolled</span>
+        <h2 class="text-lg font-semibold text-gray-900">
+            {{ selected_offering.course.program }} &middot; {{ selected_offering.semester }} &middot; Section {{ selected_offering.section }}
+        </h2>
+        <span class="text-sm text-gray-500">
+            {{ already_enrolled_ids|length }} / {{ selected_offering.max_seats }} seats filled
+        </span>
     </div>
     {% if students %}
     <form method="post">

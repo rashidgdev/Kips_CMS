@@ -14,11 +14,12 @@ from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudU
 from apps.common.exports import export_excel as export_excel_helper
 from apps.common.exports import export_pdf as export_pdf_helper
 from apps.common.middleware import get_profile
+from apps.common.pagination import paginate_queryset
 from apps.common.permissions import role_required
 
 from .challan_pdf import render_challan_pdf
-from .forms import FeeCategoryForm, FeeStructureForm, PaymentForm
-from .models import Challan, FeeCategory, FeeStructure, Payment, StudentFeeItem
+from .forms import FeeCategoryForm, FeeStructureForm, PaymentForm, StudentFeeOverrideForm
+from .models import Challan, FeeCategory, FeeStructure, Payment, StudentFeeItem, StudentFeeOverride
 from .services import (
     generate_challan,
     generate_fee_items_for_semester,
@@ -27,6 +28,7 @@ from .services import (
     get_fee_item_balance,
     get_student_fee_overview,
     record_challan_payment,
+    resync_student_fee_items,
 )
 
 FINANCE_STAFF_ROLES = (Roles.ACCOUNTANT, Roles.ADMIN)
@@ -112,28 +114,76 @@ class FeeStructureDeleteView(CrudDeleteView):
 
 @role_required(Roles.ACCOUNTANT, Roles.ADMIN)
 def student_list(request):
-    summary = get_all_students_fee_summary()
+    summary = paginate_queryset(request, get_all_students_fee_summary())
     export_urls = {
         'csv': reverse('finance:export'),
         'excel': reverse('finance:export-excel'),
         'pdf': reverse('finance:export-pdf'),
     }
-    return render(request, 'finance/student_list.html', {'summary': summary, 'export_urls': export_urls})
+    return render(
+        request, 'finance/student_list.html',
+        {'summary': summary, 'is_paginated': summary.has_other_pages(), 'export_urls': export_urls},
+    )
 
 
 @role_required(Roles.ACCOUNTANT, Roles.ADMIN)
 def student_detail(request, student_id):
     student = get_object_or_404(StudentProfile, pk=student_id)
     overview = get_student_fee_overview(student)
-    challans = [
+    overview['rows'] = paginate_queryset(request, overview['rows'], page_param='items_page')
+    challans = paginate_queryset(request, [
         {'challan': c, 'status': get_challan_status(c)}
         for c in student.challans.select_related('semester').order_by('-issue_date')
-    ]
+    ], page_param='challans_page')
+    overrides = student.fee_overrides.select_related('category')
     return render(
         request,
         'finance/student_detail.html',
-        {'student': student, 'overview': overview, 'challans': challans},
+        {'student': student, 'overview': overview, 'challans': challans, 'overrides': overrides},
     )
+
+
+@role_required(Roles.ACCOUNTANT, Roles.ADMIN)
+def fee_override_form(request, student_id, override_id=None):
+    student = get_object_or_404(StudentProfile, pk=student_id)
+    override = (
+        get_object_or_404(StudentFeeOverride, pk=override_id, student=student) if override_id else None
+    )
+    if request.method == 'POST':
+        form = StudentFeeOverrideForm(request.POST, instance=override)
+        if form.is_valid():
+            override = form.save(commit=False)
+            override.student = student
+            override.save()
+            updated = resync_student_fee_items(student, override.category)
+            message = f'Custom fee package saved for {student}.'
+            if updated:
+                message += f' {len(updated)} existing fee item(s) updated to match.'
+            messages.success(request, message)
+            return redirect('finance:student-detail', student_id=student.pk)
+    else:
+        form = StudentFeeOverrideForm(instance=override)
+
+    return render(request, 'common/generic_form.html', {
+        'form': form,
+        'page_title': f'{"Edit" if override else "Add"} Custom Fee Package - {student}',
+        'cancel_url': reverse('finance:student-detail', args=[student.pk]),
+    })
+
+
+@role_required(Roles.ACCOUNTANT, Roles.ADMIN)
+def fee_override_delete(request, student_id, override_id):
+    student = get_object_or_404(StudentProfile, pk=student_id)
+    override = get_object_or_404(StudentFeeOverride, pk=override_id, student=student)
+    if request.method == 'POST':
+        category = override.category
+        override.delete()
+        updated = resync_student_fee_items(student, category)
+        message = f'Custom fee package removed for {student}.'
+        if updated:
+            message += f' {len(updated)} existing fee item(s) reverted to the standard rate.'
+        messages.success(request, message)
+    return redirect('finance:student-detail', student_id=student.pk)
 
 
 @role_required(Roles.ACCOUNTANT, Roles.ADMIN)
@@ -232,12 +282,14 @@ def export_pdf(request):
 def student_overview(request):
     profile = get_profile(request)
     overview = get_student_fee_overview(profile)
-    challans = [
+    overview['rows'] = paginate_queryset(request, overview['rows'], page_param='items_page')
+    challans = paginate_queryset(request, [
         {'challan': c, 'status': get_challan_status(c)}
         for c in profile.challans.select_related('semester').filter(is_cancelled=False)
-    ]
+    ], page_param='challans_page')
     return render(
-        request, 'finance/student_overview.html', {'overview': overview, 'challans': challans}
+        request, 'finance/student_overview.html',
+        {'overview': overview, 'challans': challans},
     )
 
 
@@ -321,8 +373,8 @@ def challan_record_payment(request, challan_id):
 @role_required(Roles.ACCOUNTANT, Roles.ADMIN)
 def challan_list(request):
     challans = Challan.objects.select_related('student__user', 'semester').all()
-    rows = [{'challan': c, 'status': get_challan_status(c)} for c in challans]
-    return render(request, 'finance/challan_list.html', {'rows': rows})
+    rows = paginate_queryset(request, [{'challan': c, 'status': get_challan_status(c)} for c in challans])
+    return render(request, 'finance/challan_list.html', {'rows': rows, 'is_paginated': rows.has_other_pages()})
 
 
 @role_required(Roles.ACCOUNTANT, Roles.ADMIN)
@@ -330,13 +382,13 @@ def challan_detail(request, challan_id):
     challan = get_object_or_404(
         Challan.objects.select_related('student__user', 'semester'), pk=challan_id
     )
-    lines = challan.lines.select_related('fee_item__category')
+    lines = paginate_queryset(request, challan.lines.select_related('fee_item__category'))
     status = get_challan_status(challan)
     return render(
         request,
         'finance/challan_detail.html',
         {
-            'challan': challan, 'lines': lines, 'status': status,
+            'challan': challan, 'lines': lines, 'is_paginated': lines.has_other_pages(), 'status': status,
             'today': datetime.date.today(), 'payment_methods': Payment.Method.choices,
         },
     )

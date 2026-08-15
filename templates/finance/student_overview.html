@@ -40,6 +40,7 @@
             </tbody>
         </table>
         </div>
+        {% include 'common/_pagination.html' with page_obj=overview.rows is_paginated=overview.rows.has_other_pages page_param='items_page' %}
     {% else %}
         <p class="text-sm text-gray-500">No fee items on record yet.</p>
     {% endif %}
@@ -80,6 +81,7 @@
             </tbody>
         </table>
         </div>
+        {% include 'common/_pagination.html' with page_obj=challans is_paginated=challans.has_other_pages page_param='challans_page' %}
     {% else %}
         <p class="text-sm text-gray-500">No challans issued yet.</p>
     {% endif %}

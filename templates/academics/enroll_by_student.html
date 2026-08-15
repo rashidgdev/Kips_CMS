@@ -37,7 +37,7 @@
             <thead>
                 <tr>
                     <th class="w-10"><input type="checkbox" id="checkAll" class="checkbox-field"></th>
-                    <th>Offering</th><th>Semester</th><th>Status</th>
+                    <th>Offering</th><th>Semester</th><th>Section</th><th>Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -50,6 +50,13 @@
                     </td>
                     <td class="font-medium text-gray-900">{{ o.course }}</td>
                     <td>{{ o.semester }}</td>
+                    <td>
+                        {% if o.section == selected_student.section %}
+                            <span class="badge-blue">{{ o.section }}</span>
+                        {% else %}
+                            {{ o.section }}
+                        {% endif %}
+                    </td>
                     <td>
                         {% if o.pk in already_enrolled_ids %}
                             <span class="badge-green">Enrolled</span>

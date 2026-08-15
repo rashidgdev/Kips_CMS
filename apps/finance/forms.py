@@ -4,7 +4,7 @@ from django import forms
 
 from apps.common.forms import INPUT_CLASSES, TailwindFormMixin
 
-from .models import FeeCategory, FeeStructure, Payment
+from .models import FeeCategory, FeeStructure, Payment, StudentFeeOverride
 
 
 class FeeCategoryForm(TailwindFormMixin, forms.ModelForm):
@@ -17,6 +17,12 @@ class FeeStructureForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
         model = FeeStructure
         fields = ['program', 'category', 'amount', 'is_recurring']
+
+
+class StudentFeeOverrideForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = StudentFeeOverride
+        fields = ['category', 'amount', 'is_recurring']
 
 
 class PaymentForm(forms.ModelForm):

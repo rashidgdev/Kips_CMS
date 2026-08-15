@@ -97,6 +97,7 @@ class StudentCreateForm(_PersonCreateFormBase):
     roll_number = forms.CharField(max_length=30)
     program = forms.ModelChoiceField(queryset=None)
     current_semester = forms.ModelChoiceField(queryset=None, required=False)
+    section = forms.CharField(max_length=10, initial='A', help_text='Which parallel section this student belongs to.')
     admission_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
     date_of_birth = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
     gender = forms.ChoiceField(choices=[('', '---------')] + StudentProfile.Gender.choices, required=False)
@@ -126,6 +127,7 @@ class StudentCreateForm(_PersonCreateFormBase):
             roll_number=data['roll_number'],
             program=data['program'],
             current_semester=data.get('current_semester'),
+            section=data.get('section') or 'A',
             admission_date=data['admission_date'],
             date_of_birth=data.get('date_of_birth'),
             gender=data.get('gender', ''),
@@ -147,6 +149,8 @@ class TeacherCreateForm(_PersonCreateFormBase):
     qualification = forms.CharField(max_length=200, required=False)
     joining_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
     per_lecture_rate = forms.DecimalField(max_digits=10, decimal_places=2, initial=0)
+    cnic = forms.CharField(max_length=20, required=False)
+    address = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}), required=False)
 
     def clean_employee_id(self):
         employee_id = self.cleaned_data['employee_id']
@@ -165,6 +169,8 @@ class TeacherCreateForm(_PersonCreateFormBase):
             qualification=data.get('qualification', ''),
             joining_date=data['joining_date'],
             per_lecture_rate=data['per_lecture_rate'],
+            cnic=data.get('cnic', ''),
+            address=data.get('address', ''),
         )
         return profile, temp_password
 
@@ -180,6 +186,8 @@ class StaffCreateForm(_PersonCreateFormBase):
     employee_id = forms.CharField(max_length=30)
     joining_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
     notes = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}), required=False)
+    cnic = forms.CharField(max_length=20, required=False)
+    address = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}), required=False)
 
     def clean_employee_id(self):
         employee_id = self.cleaned_data['employee_id']
@@ -198,6 +206,8 @@ class StaffCreateForm(_PersonCreateFormBase):
             employee_id=data['employee_id'],
             joining_date=data['joining_date'],
             notes=data.get('notes', ''),
+            cnic=data.get('cnic', ''),
+            address=data.get('address', ''),
         )
         return profile, temp_password
 
@@ -205,16 +215,16 @@ class StaffCreateForm(_PersonCreateFormBase):
 class StudentProfileEditForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
         model = StudentProfile
-        fields = ['program', 'current_semester', 'status']
+        fields = ['program', 'current_semester', 'section', 'status']
 
 
 class TeacherProfileEditForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
         model = TeacherProfile
-        fields = ['department', 'designation', 'per_lecture_rate', 'employment_status']
+        fields = ['department', 'designation', 'per_lecture_rate', 'employment_status', 'cnic', 'address']
 
 
 class StaffProfileEditForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
         model = StaffProfile
-        fields = ['notes']
+        fields = ['notes', 'cnic', 'address']

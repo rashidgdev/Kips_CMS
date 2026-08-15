@@ -5,25 +5,15 @@
 <h1 class="mb-1 text-2xl font-semibold text-gray-900">My Profile</h1>
 <p class="mb-6 text-sm text-gray-500">Manage your profile photo and account security.</p>
 
+<div class="mb-6">
+    {% include 'accounts/_profile_card.html' %}
+</div>
+
 <div class="card page-enter max-w-md">
     <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-700">
         {% icon 'camera' 'h-4 w-4' %}
         Profile Photo
     </h2>
-
-    <div class="mb-4 flex items-center gap-4">
-        {% if user.photo %}
-            <img src="{{ user.photo.url }}" alt="{{ user.get_full_name }}" class="h-20 w-20 rounded-full object-cover ring-2 ring-gray-100">
-        {% else %}
-            <span class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-2xl font-semibold text-white">
-                {{ user.first_name|default:user.username|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
-            </span>
-        {% endif %}
-        <div class="text-sm">
-            <div class="font-medium text-gray-900">{{ user.get_full_name|default:user.username }}</div>
-            <div class="text-gray-500">{{ role_display }}</div>
-        </div>
-    </div>
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load icons %}
 {% block title %}{{ student }} - Fees{% endblock %}
 {% block content %}
 <div class="mb-6 flex flex-wrap items-center justify-between gap-2">
@@ -23,6 +24,52 @@
     {% include 'common/_stat_tile.html' with icon='banknotes' label='Total Due' value=overview.total_due prefix='Rs.' color='bg-blue-50 text-blue-700' %}
     {% include 'common/_stat_tile.html' with icon='trending-up' label='Total Paid' value=overview.total_paid prefix='Rs.' color='bg-emerald-50 text-emerald-700' %}
     {% include 'common/_stat_tile.html' with icon='currency' label='Outstanding' value=overview.total_outstanding prefix='Rs.' color='bg-red-50 text-red-700' %}
+</div>
+
+<div class="card page-enter mb-6">
+    <div class="mb-4 flex items-center justify-between">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900">Custom Fee Package</h2>
+            <p class="text-sm text-gray-500">Overrides the program's standard rate for specific categories - e.g. a scholarship or negotiated discount.</p>
+        </div>
+        <a href="{% url 'finance:fee-override-new' student.pk %}" class="btn-secondary">
+            {% icon 'plus' 'h-4 w-4' %}
+            Add Override
+        </a>
+    </div>
+    {% if overrides %}
+        <div class="table-wrap">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Custom Amount</th>
+                    <th>Recurring</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for override in overrides %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ override.category }}</td>
+                    <td>Rs. {{ override.amount }}</td>
+                    <td>{% if override.is_recurring %}Every semester{% else %}One-time{% endif %}</td>
+                    <td class="whitespace-nowrap">
+                        <a href="{% url 'finance:fee-override-edit' student.pk override.pk %}" class="link">Edit</a>
+                        <form method="post" action="{% url 'finance:fee-override-delete' student.pk override.pk %}" class="inline"
+                              onsubmit="return confirm('Remove this custom package? The affected fee item(s) will revert to the standard rate.');">
+                            {% csrf_token %}
+                            <button type="submit" class="link-danger ml-3">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-gray-500">No custom package - this student pays the standard rate for {{ student.program }}.</p>
+    {% endif %}
 </div>
 
 <div class="card page-enter">
@@ -62,6 +109,7 @@
             </tbody>
         </table>
         </div>
+        {% include 'common/_pagination.html' with page_obj=overview.rows is_paginated=overview.rows.has_other_pages page_param='items_page' %}
     {% else %}
         <p class="text-sm text-gray-500">No fee items yet. Use "Generate Fee Items" above.</p>
     {% endif %}
@@ -103,6 +151,7 @@
             </tbody>
         </table>
         </div>
+        {% include 'common/_pagination.html' with page_obj=challans is_paginated=challans.has_other_pages page_param='challans_page' %}
     {% else %}
         <p class="text-sm text-gray-500">No challans issued yet.</p>
     {% endif %}

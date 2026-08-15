@@ -7,6 +7,7 @@ from apps.academics.models import CourseOffering, Enrollment
 from apps.accounts.models import Roles
 from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudUpdateView
 from apps.common.middleware import get_profile
+from apps.common.pagination import paginate_queryset
 from apps.common.permissions import role_required
 
 from .forms import AssessmentCategoryForm, AssessmentForm
@@ -56,8 +57,10 @@ class AssessmentCategoryDeleteView(CrudDeleteView):
 @role_required(Roles.TEACHER, Roles.HOD)
 def offering_list(request):
     profile = get_profile(request)
-    offerings = profile.course_offerings.select_related('course', 'semester').filter(is_active=True)
-    return render(request, 'assessments/offering_list.html', {'offerings': offerings})
+    offerings = paginate_queryset(
+        request, profile.course_offerings.select_related('course', 'semester').filter(is_active=True)
+    )
+    return render(request, 'assessments/offering_list.html', {'offerings': offerings, 'is_paginated': offerings.has_other_pages()})
 
 
 def _get_own_offering(request, offering_id):
@@ -68,14 +71,17 @@ def _get_own_offering(request, offering_id):
 @role_required(Roles.TEACHER, Roles.HOD)
 def assessment_list(request, offering_id):
     offering = _get_own_offering(request, offering_id)
-    assessments = offering.assessments.select_related('category').annotate(
-        marks_count=Count('marks')
+    assessments = paginate_queryset(
+        request, offering.assessments.select_related('category').annotate(marks_count=Count('marks'))
     )
     total_weight = offering.assessments.aggregate(total=Sum('weight_percent'))['total'] or 0
     return render(
         request,
         'assessments/assessment_list.html',
-        {'offering': offering, 'assessments': assessments, 'total_weight': total_weight},
+        {
+            'offering': offering, 'assessments': assessments, 'total_weight': total_weight,
+            'is_paginated': assessments.has_other_pages(),
+        },
     )
 
 
@@ -160,11 +166,14 @@ def student_course_detail(request, offering_id):
         enrollments__status=Enrollment.Status.ENROLLED,
     )
     result = CourseResult.objects.filter(student=profile, course_offering=offering).first()
-    marks = Mark.objects.filter(student=profile, assessment__course_offering=offering).select_related(
-        'assessment__category'
+    marks = paginate_queryset(
+        request,
+        Mark.objects.filter(student=profile, assessment__course_offering=offering).select_related(
+            'assessment__category'
+        ),
     )
     return render(
         request,
         'assessments/student_course_detail.html',
-        {'offering': offering, 'result': result, 'marks': marks},
+        {'offering': offering, 'result': result, 'marks': marks, 'is_paginated': marks.has_other_pages()},
     )

@@ -71,8 +71,8 @@ def enroll_by_offering_api(request):
         student_ids = {int(sid) for sid in request.data.get('student_ids', [])}
         if not student_ids:
             return Response({'detail': 'Select at least one student to enroll.'}, status=400)
-        enrolled_count = bulk_enroll_by_offering(offering, student_ids)
-        return Response({'enrolled_count': enrolled_count}, status=201)
+        enrolled_count, skipped_count = bulk_enroll_by_offering(offering, student_ids)
+        return Response({'enrolled_count': enrolled_count, 'skipped_for_capacity_count': skipped_count}, status=201)
 
     already_enrolled_ids = set(offering.enrollments.values_list('student_id', flat=True))
     students = StudentProfile.objects.filter(

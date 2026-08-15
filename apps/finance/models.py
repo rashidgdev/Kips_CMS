@@ -35,6 +35,31 @@ class FeeStructure(TimeStampedModel):
         return f'{self.program.code} - {self.category} - {self.amount}'
 
 
+class StudentFeeOverride(TimeStampedModel):
+    """A custom fee package for one student on one category, overriding the
+    program-wide FeeStructure - e.g. a negotiated discount or scholarship.
+    Most students have no override rows at all and simply pay the program's
+    standard FeeStructure; only students who differ get one row per category
+    that differs. See services.generate_fee_items_for_semester and
+    resync_student_fee_items for how this takes effect."""
+
+    student = models.ForeignKey(
+        'accounts.StudentProfile', on_delete=models.CASCADE, related_name='fee_overrides'
+    )
+    category = models.ForeignKey(FeeCategory, on_delete=models.CASCADE, related_name='student_overrides')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_recurring = models.BooleanField(
+        default=True, help_text='Same meaning as FeeStructure.is_recurring.'
+    )
+
+    class Meta:
+        ordering = ['student', 'category']
+        unique_together = ('student', 'category')
+
+    def __str__(self):
+        return f'{self.student.roll_number} - {self.category} - {self.amount} (custom)'
+
+
 class StudentFeeItem(TimeStampedModel):
     student = models.ForeignKey(
         'accounts.StudentProfile', on_delete=models.CASCADE, related_name='fee_items'

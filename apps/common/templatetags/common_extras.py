@@ -17,3 +17,16 @@ def get_attr(obj, attr_path):
         if callable(value):
             value = value()
     return value
+
+
+@register.simple_tag(takes_context=True)
+def paginate_url(context, page_number, page_param='page'):
+    """Builds a `?<page_param>=<page_number>` link that preserves every
+    other current query param (filters, search terms, a second table's own
+    page number, etc.) instead of dropping them the way a plain
+    `?page=N` link would. `page_param` lets two independently-paginated
+    tables on the same page (e.g. finance student_detail's "Fee Items" and
+    "Challans" tables) page independently without resetting each other."""
+    params = context['request'].GET.copy()
+    params[page_param] = page_number
+    return '?' + params.urlencode()

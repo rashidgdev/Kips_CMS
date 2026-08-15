@@ -272,7 +272,10 @@ def enroll_by_offering(request):
         selected_offering = get_object_or_404(CourseOffering, pk=offering_id)
         already_enrolled_ids = set(selected_offering.enrollments.values_list('student_id', flat=True))
         students = StudentProfile.objects.filter(
-            program=selected_offering.course.program, status=StudentProfile.Status.ACTIVE
+            program=selected_offering.course.program,
+            current_semester=selected_offering.semester,
+            section=selected_offering.section,
+            status=StudentProfile.Status.ACTIVE,
         ).select_related('user').order_by('roll_number')
 
     if request.method == 'POST':
@@ -282,8 +285,14 @@ def enroll_by_offering(request):
         elif not student_ids:
             messages.error(request, 'Select at least one student to enroll.')
         else:
-            enrolled_count = bulk_enroll_by_offering(selected_offering, student_ids)
+            enrolled_count, skipped_count = bulk_enroll_by_offering(selected_offering, student_ids)
             messages.success(request, f'Enrolled {enrolled_count} student(s) in {selected_offering}.')
+            if skipped_count:
+                messages.warning(
+                    request,
+                    f'{skipped_count} student(s) could not be enrolled - the section is at capacity '
+                    f'({selected_offering.max_seats} seats).',
+                )
             return redirect(f'{request.path}?offering={selected_offering.id}')
 
     return render(request, 'academics/enroll_by_offering.html', {
@@ -308,7 +317,17 @@ def enroll_by_student(request):
         already_enrolled_ids = set(selected_student.enrollments.values_list('course_offering_id', flat=True))
         offerings = CourseOffering.objects.filter(
             course__program=selected_student.program, is_active=True
-        ).select_related('course', 'semester').order_by('-semester__is_current', 'semester', 'course')
+        )
+        # Scope to the student's own current semester when known - otherwise
+        # every semester the program has ever run would show, which is how
+        # this used to work for everyone and is why picking the right
+        # section's offering was error-prone once a semester had more than
+        # one.
+        if selected_student.current_semester_id:
+            offerings = offerings.filter(semester=selected_student.current_semester)
+        offerings = offerings.select_related('course', 'semester').order_by(
+            '-semester__is_current', 'semester', 'course'
+        )
 
     if request.method == 'POST':
         offering_ids = {int(oid) for oid in request.POST.getlist('offering_ids')}

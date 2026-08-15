@@ -10,6 +10,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 
 from apps.common.api_crud_views import ApiCrudDeleteView, ApiCrudFormView, ApiCrudListView
+from apps.common.api_permissions import resolve_profile
+from apps.common.pagination import paginate_queryset
 from apps.common.permissions import role_required
 
 from . import imports as bulk_imports
@@ -46,7 +48,43 @@ class ChangePasswordView(LoginRequiredMixin, PasswordChangeView):
         return response
 
 
-# --- My profile (photo) -------------------------------------------------
+# --- Profile card ---------------------------------------------------------
+# One reusable card (templates/accounts/_profile_card.html) shows the same
+# set of fields - photo, name, ID, department, CNIC, entry date, address -
+# regardless of role, by normalizing each role's differently-named fields
+# here rather than branching on role throughout the template.
+
+def _profile_card_context(person):
+    profile = resolve_profile(person)
+    role = person.role
+    if role == Roles.STUDENT:
+        id_number = profile.roll_number if profile else ''
+        department = profile.program.department if profile else None
+        entry_date = profile.admission_date if profile else None
+        entry_label = 'Admission Date'
+    elif role in (Roles.TEACHER, Roles.HOD):
+        id_number = profile.employee_id if profile else ''
+        department = profile.department if profile else None
+        entry_date = profile.joining_date if profile else None
+        entry_label = 'Joining Date'
+    else:
+        # Coordinator/Accountant/Admin are campus-wide by design - no department.
+        id_number = profile.employee_id if profile else ''
+        department = None
+        entry_date = profile.joining_date if profile else None
+        entry_label = 'Joining Date'
+
+    return {
+        'person': person,
+        'profile': profile,
+        'id_number': id_number,
+        'department': department,
+        'entry_date': entry_date,
+        'entry_label': entry_label,
+    }
+
+
+# --- My profile (photo + card) -------------------------------------------
 
 @login_required
 def profile(request):
@@ -58,7 +96,13 @@ def profile(request):
             return redirect('accounts:profile')
     else:
         form = ProfilePhotoForm(instance=request.user)
-    return render(request, 'accounts/profile.html', {'form': form})
+    return render(request, 'accounts/profile.html', {'form': form, **_profile_card_context(request.user)})
+
+
+@role_required(*STAFF_MANAGEMENT_ROLES)
+def person_profile(request, user_id):
+    person = get_object_or_404(User, pk=user_id)
+    return render(request, 'accounts/person_profile.html', _profile_card_context(person))
 
 
 # --- Departments (converted to the REST-API-driven CRUD pattern - see
@@ -104,13 +148,14 @@ def people_directory(request):
     department_filter = request.GET.get('department', '')
     query = request.GET.get('q', '').strip()
 
-    users = filter_people(role=role_filter, department=department_filter, query=query)
+    users = paginate_queryset(request, filter_people(role=role_filter, department=department_filter, query=query))
 
     return render(
         request,
         'accounts/people_directory.html',
         {
             'users': users,
+            'is_paginated': users.has_other_pages(),
             'roles': Roles.choices,
             'role_filter': role_filter,
             'departments': Department.objects.order_by('name'),

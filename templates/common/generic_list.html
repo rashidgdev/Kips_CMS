@@ -77,17 +77,7 @@
     </table>
     </div>
     </form>
-    {% if is_paginated %}
-    <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 text-sm text-gray-500">
-        {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}" class="link">&laquo; Previous</a>
-        {% else %}<span></span>{% endif %}
-        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}" class="link">Next &raquo;</a>
-        {% else %}<span></span>{% endif %}
-    </div>
-    {% endif %}
+    {% include 'common/_pagination.html' %}
     {% else %}
         <div class="py-8 text-center">
             <p class="text-sm text-gray-500">No records yet.</p>

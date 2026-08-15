@@ -1,31 +1,47 @@
 import datetime
 from decimal import Decimal
 
-from .models import Challan, ChallanLine, FeeStructure, Payment, StudentFeeItem
+from .models import Challan, ChallanLine, FeeStructure, Payment, StudentFeeItem, StudentFeeOverride
 
 
 def generate_fee_items_for_semester(student, semester):
-    """Idempotently creates this student's fee items for `semester` from their
-    program's FeeStructure. Recurring items (tuition, exam fee) are created
-    every semester; one-time items (registration fee) are only created if the
-    student has never been charged that category before, in any semester."""
+    """Idempotently creates this student's fee items for `semester`. Each
+    category uses that student's StudentFeeOverride if one exists, otherwise
+    falls back to their program's shared FeeStructure - so most students
+    (no override rows) behave exactly as before, while a student with a
+    negotiated package gets their own amount/is_recurring for that category.
+    A category can also exist ONLY as a student-specific override with no
+    program-wide FeeStructure at all (a charge unique to that student).
+    Recurring items are created every semester; one-time items are only
+    created if the student has never been charged that category before, in
+    any semester."""
     created = []
-    structures = FeeStructure.objects.filter(program=student.program).select_related('category')
+    structures = {
+        s.category_id: s for s in FeeStructure.objects.filter(program=student.program)
+    }
+    overrides = {
+        o.category_id: o for o in StudentFeeOverride.objects.filter(student=student)
+    }
 
-    for structure in structures:
-        if not structure.is_recurring:
+    for category_id in set(structures) | set(overrides):
+        override = overrides.get(category_id)
+        structure = structures.get(category_id)
+        amount = override.amount if override else structure.amount
+        is_recurring = override.is_recurring if override else structure.is_recurring
+
+        if not is_recurring:
             already_charged = StudentFeeItem.objects.filter(
-                student=student, category=structure.category
+                student=student, category_id=category_id
             ).exists()
             if already_charged:
                 continue
 
         item, was_created = StudentFeeItem.objects.get_or_create(
             student=student,
-            category=structure.category,
+            category_id=category_id,
             semester=semester,
             defaults={
-                'amount_due': structure.amount,
+                'amount_due': amount,
                 'due_date': semester.start_date + datetime.timedelta(days=14),
             },
         )
@@ -33,6 +49,32 @@ def generate_fee_items_for_semester(student, semester):
             created.append(item)
 
     return created
+
+
+def resync_student_fee_items(student, category):
+    """Re-applies the currently-effective amount for this student+category
+    (their StudentFeeOverride if one exists, else the program's standard
+    FeeStructure) onto every existing StudentFeeItem of theirs in that
+    category - so setting, changing, or removing a custom fee package takes
+    effect immediately on already-generated items, not just future semester
+    generations. Never reduces amount_due below what's already been paid on
+    that item. Returns the list of items that were actually changed."""
+    override = StudentFeeOverride.objects.filter(student=student, category=category).first()
+    structure = FeeStructure.objects.filter(program=student.program, category=category).first()
+    target = override.amount if override else (structure.amount if structure else None)
+    if target is None:
+        return []
+
+    updated = []
+    for item in StudentFeeItem.objects.filter(student=student, category=category):
+        paid = sum((p.amount_paid for p in item.payments.all()), Decimal('0'))
+        new_amount = max(target, paid)
+        if new_amount != item.amount_due:
+            item.amount_due = new_amount
+            item.save(update_fields=['amount_due'])
+            updated.append(item)
+
+    return updated
 
 
 def get_fee_item_balance(fee_item):

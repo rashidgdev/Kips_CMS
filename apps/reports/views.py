@@ -8,6 +8,7 @@ from apps.academics.models import CourseOffering, Semester
 from apps.accounts.models import Roles, StudentProfile
 from apps.common.exports import export_excel, export_pdf
 from apps.common.middleware import get_profile
+from apps.common.pagination import paginate_queryset
 from apps.common.permissions import role_required
 
 from .progress_pdf import render_progress_report_pdf
@@ -80,7 +81,7 @@ def attendance_report(request):
     offering_id = request.GET.get('course_offering')
     if offering_id:
         offering = get_object_or_404(offerings, pk=offering_id)
-        rows = get_attendance_report(offering)
+        rows = paginate_queryset(request, get_attendance_report(offering))
         export_urls = {
             'excel': f"{reverse('reports:attendance-export-excel')}?course_offering={offering.pk}",
             'pdf': f"{reverse('reports:attendance-export-pdf')}?course_offering={offering.pk}",
@@ -89,7 +90,10 @@ def attendance_report(request):
     return render(
         request,
         'reports/attendance_report.html',
-        {'offerings': offerings, 'offering': offering, 'rows': rows, 'export_urls': export_urls},
+        {
+            'offerings': offerings, 'offering': offering, 'rows': rows, 'export_urls': export_urls,
+            'is_paginated': rows.has_other_pages() if offering_id else False,
+        },
     )
 
 
@@ -125,7 +129,7 @@ def academic_report(request):
     offering_id = request.GET.get('course_offering')
     if offering_id:
         offering = get_object_or_404(offerings, pk=offering_id)
-        rows = get_academic_report(offering)
+        rows = paginate_queryset(request, get_academic_report(offering))
         export_urls = {
             'excel': f"{reverse('reports:academic-export-excel')}?course_offering={offering.pk}",
             'pdf': f"{reverse('reports:academic-export-pdf')}?course_offering={offering.pk}",
@@ -134,7 +138,10 @@ def academic_report(request):
     return render(
         request,
         'reports/academic_report.html',
-        {'offerings': offerings, 'offering': offering, 'rows': rows, 'export_urls': export_urls},
+        {
+            'offerings': offerings, 'offering': offering, 'rows': rows, 'export_urls': export_urls,
+            'is_paginated': rows.has_other_pages() if offering_id else False,
+        },
     )
 
 
@@ -172,7 +179,7 @@ def merit_list(request):
     )
     if semester_id:
         semester = get_object_or_404(Semester, pk=semester_id)
-        rows = get_merit_list(semester)
+        rows = paginate_queryset(request, get_merit_list(semester))
         export_urls = {
             'excel': f"{reverse('reports:merit-export-excel')}?semester={semester.pk}",
             'pdf': f"{reverse('reports:merit-export-pdf')}?semester={semester.pk}",
@@ -181,7 +188,10 @@ def merit_list(request):
     return render(
         request,
         'reports/merit_list.html',
-        {'semesters': semesters, 'semester': semester, 'rows': rows, 'export_urls': export_urls},
+        {
+            'semesters': semesters, 'semester': semester, 'rows': rows, 'export_urls': export_urls,
+            'is_paginated': rows.has_other_pages() if semester_id else False,
+        },
     )
 
 
@@ -213,7 +223,11 @@ def progress_students(request):
             | Q(user__last_name__icontains=query)
             | Q(user__username__icontains=query)
         )
-    return render(request, 'reports/progress_students.html', {'students': students, 'query': query})
+    students = paginate_queryset(request, students)
+    return render(
+        request, 'reports/progress_students.html',
+        {'students': students, 'is_paginated': students.has_other_pages(), 'query': query},
+    )
 
 
 def _progress_report_student(request, student_id):

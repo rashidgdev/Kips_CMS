@@ -12,6 +12,9 @@ urlpatterns = [
     path('students/<int:student_id>/', views.student_detail, name='student-detail'),
     path('students/<int:student_id>/generate/', views.generate_items, name='generate'),
     path('students/<int:student_id>/generate-challan/', views.challan_generate, name='challan-generate'),
+    path('students/<int:student_id>/fee-overrides/new/', views.fee_override_form, name='fee-override-new'),
+    path('students/<int:student_id>/fee-overrides/<int:override_id>/edit/', views.fee_override_form, name='fee-override-edit'),
+    path('students/<int:student_id>/fee-overrides/<int:override_id>/delete/', views.fee_override_delete, name='fee-override-delete'),
     path('items/<int:item_id>/pay/', views.record_payment, name='pay'),
     path('my/', views.student_overview, name='student-overview'),
 

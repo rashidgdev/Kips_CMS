@@ -22,6 +22,7 @@ urlpatterns = [
     path('departments/<int:pk>/edit/', views.DepartmentFormView.as_view(), name='department-edit'),
     path('departments/<int:pk>/delete/', views.DepartmentDeleteView.as_view(), name='department-delete'),
     path('people/', views.people_directory, name='people'),
+    path('people/<int:user_id>/', views.person_profile, name='person-profile'),
     path('people/<int:user_id>/toggle-active/', views.toggle_active, name='toggle-active'),
     path('people/students/new/', views.student_create, name='student-new'),
     path('people/students/<int:profile_id>/edit/', views.student_edit, name='student-edit'),

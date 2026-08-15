@@ -9,6 +9,7 @@ from django.urls import reverse
 from apps.accounts.models import Roles
 from apps.common.exports import export_excel, export_pdf
 from apps.common.middleware import get_profile
+from apps.common.pagination import paginate_queryset
 from apps.common.permissions import role_required
 
 from .models import DayBookEntry, MonthlyWorkloadSnapshot
@@ -18,8 +19,11 @@ from .services import generate_workload_snapshots, get_all_teachers_workload, ge
 @role_required(Roles.TEACHER, Roles.HOD)
 def day_book_list(request):
     profile = get_profile(request)
-    entries = DayBookEntry.objects.filter(session__course_offering__teacher=profile).select_related(
-        'session__course_offering__course', 'verified_by'
+    entries = paginate_queryset(
+        request,
+        DayBookEntry.objects.filter(session__course_offering__teacher=profile).select_related(
+            'session__course_offering__course', 'verified_by'
+        ),
     )
     today = datetime.date.today()
     workload = get_teacher_workload(profile, today.year, today.month)
@@ -28,6 +32,7 @@ def day_book_list(request):
         'daybook/day_book_list.html',
         {
             'entries': entries,
+            'is_paginated': entries.has_other_pages(),
             'workload': workload,
             'today': today,
             'pay_label': f'Estimated pay ({today:%b %Y})',
@@ -37,10 +42,13 @@ def day_book_list(request):
 
 @role_required(Roles.COORDINATOR, Roles.ADMIN)
 def verify_queue(request):
-    pending = DayBookEntry.objects.filter(verified_by__isnull=True).select_related(
-        'session__course_offering__course', 'session__course_offering__teacher__user'
+    pending = paginate_queryset(
+        request,
+        DayBookEntry.objects.filter(verified_by__isnull=True).select_related(
+            'session__course_offering__course', 'session__course_offering__teacher__user'
+        ),
     )
-    return render(request, 'daybook/verify_queue.html', {'pending': pending})
+    return render(request, 'daybook/verify_queue.html', {'pending': pending, 'is_paginated': pending.has_other_pages()})
 
 
 @role_required(Roles.COORDINATOR, Roles.ADMIN)
@@ -73,16 +81,18 @@ def workload_report(request):
         messages.success(request, f'Payroll snapshot generated for {year}-{month:02d}.')
         return redirect(f"{request.path}?month={year}-{month:02d}")
 
-    rows = get_all_teachers_workload(year, month)
-    total_amount = sum((row['total_amount'] for row in rows), start=0)
+    all_rows = get_all_teachers_workload(year, month)
+    total_amount = sum((row['total_amount'] for row in all_rows), start=0)
     snapshot_generated = MonthlyWorkloadSnapshot.objects.filter(year=year, month=month).exists()
     month_value = f'{year}-{month:02d}'
+    rows = paginate_queryset(request, all_rows)
 
     return render(
         request,
         'daybook/workload_report.html',
         {
             'rows': rows,
+            'is_paginated': rows.has_other_pages(),
             'year': year,
             'month': month,
             'month_value': month_value,

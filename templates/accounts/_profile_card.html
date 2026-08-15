@@ -1,0 +1,115 @@
+{% load icons %}
+<div class="card page-enter">
+    <div class="mb-6 flex flex-wrap items-center gap-4">
+        {% if person.photo %}
+            <img src="{{ person.photo.url }}" alt="{{ person.get_full_name }}" class="h-20 w-20 shrink-0 rounded-full object-cover ring-2 ring-gray-100">
+        {% else %}
+            <span class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-2xl font-semibold text-white">
+                {{ person.first_name|default:person.username|slice:":1"|upper }}{{ person.last_name|slice:":1"|upper }}
+            </span>
+        {% endif %}
+        <div>
+            <h2 class="text-xl font-semibold text-gray-900">{{ person.get_full_name|default:person.username }}</h2>
+            <span class="badge-blue mt-1">{{ person.get_role_display }}</span>
+        </div>
+    </div>
+
+    <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+            <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">ID Number</dt>
+            <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ id_number|default:"-" }}</dd>
+        </div>
+        <div>
+            <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Department</dt>
+            <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ department|default:"-" }}</dd>
+        </div>
+        <div>
+            <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ entry_label|default:"Entry Date" }}</dt>
+            <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ entry_date|default:"-" }}</dd>
+        </div>
+        <div>
+            <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">CNIC</dt>
+            <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.cnic|default:"-" }}</dd>
+        </div>
+        <div>
+            <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Email</dt>
+            <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ person.email|default:"-" }}</dd>
+        </div>
+        <div>
+            <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Phone</dt>
+            <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ person.phone_number|default:"-" }}</dd>
+        </div>
+        <div class="sm:col-span-2 lg:col-span-3">
+            <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Address</dt>
+            <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.address|default:"-" }}</dd>
+        </div>
+    </dl>
+
+    {% if profile %}
+    <div class="mt-6 border-t border-gray-100 pt-5">
+        <h3 class="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            {% if person.role == 'student' %}Academic Details
+            {% elif person.role == 'teacher' or person.role == 'hod' %}Employment Details
+            {% else %}Additional Details{% endif %}
+        </h3>
+        <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            {% if person.role == 'student' %}
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Program</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.program|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Current Semester</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.current_semester|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Section</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.section|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Status</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.get_status_display }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Date of Birth</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.date_of_birth|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Gender</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.get_gender_display|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Guardian Name</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.guardian_name|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Guardian Phone</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.guardian_phone|default:"-" }}</dd>
+                </div>
+            {% elif person.role == 'teacher' or person.role == 'hod' %}
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Designation</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.designation|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Qualification</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.qualification|default:"-" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Employment Status</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.get_employment_status_display }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Per-Lecture Rate</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">Rs. {{ profile.per_lecture_rate }}</dd>
+                </div>
+            {% else %}
+                <div class="sm:col-span-2 lg:col-span-3">
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-400">Notes</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-gray-900">{{ profile.notes|default:"-" }}</dd>
+                </div>
+            {% endif %}
+        </dl>
+    </div>
+    {% endif %}
+</div>

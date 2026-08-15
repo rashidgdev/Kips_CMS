@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from apps.academics.models import CourseOffering, Enrollment
 from apps.accounts.models import Roles
 from apps.common.middleware import get_profile
+from apps.common.pagination import paginate_queryset
 from apps.common.permissions import role_required
 
 from .forms import LectureSessionForm
@@ -14,8 +15,10 @@ from .services import get_student_course_stats, get_student_overview, mark_atten
 @role_required(Roles.TEACHER, Roles.HOD)
 def offering_list(request):
     profile = get_profile(request)
-    offerings = profile.course_offerings.select_related('course', 'semester').filter(is_active=True)
-    return render(request, 'attendance/offering_list.html', {'offerings': offerings})
+    offerings = paginate_queryset(
+        request, profile.course_offerings.select_related('course', 'semester').filter(is_active=True)
+    )
+    return render(request, 'attendance/offering_list.html', {'offerings': offerings, 'is_paginated': offerings.has_other_pages()})
 
 
 def _get_own_offering(request, offering_id):
@@ -26,9 +29,10 @@ def _get_own_offering(request, offering_id):
 @role_required(Roles.TEACHER, Roles.HOD)
 def session_list(request, offering_id):
     offering = _get_own_offering(request, offering_id)
-    sessions = offering.sessions.all()
+    sessions = paginate_queryset(request, offering.sessions.all())
     return render(
-        request, 'attendance/session_list.html', {'offering': offering, 'sessions': sessions}
+        request, 'attendance/session_list.html',
+        {'offering': offering, 'sessions': sessions, 'is_paginated': sessions.has_other_pages()},
     )
 
 
@@ -96,11 +100,14 @@ def student_course_detail(request, offering_id):
         enrollments__status=Enrollment.Status.ENROLLED,
     )
     stat = get_student_course_stats(profile, offering)
-    records = AttendanceRecord.objects.filter(
-        session__course_offering=offering, student=profile
-    ).select_related('session')
+    records = paginate_queryset(
+        request,
+        AttendanceRecord.objects.filter(
+            session__course_offering=offering, student=profile
+        ).select_related('session'),
+    )
     return render(
         request,
         'attendance/student_course_detail.html',
-        {'offering': offering, 'stat': stat, 'records': records},
+        {'offering': offering, 'stat': stat, 'records': records, 'is_paginated': records.has_other_pages()},
     )

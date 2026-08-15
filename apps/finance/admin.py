@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Challan, ChallanLine, FeeCategory, FeeStructure, Payment, StudentFeeItem
+from .models import Challan, ChallanLine, FeeCategory, FeeStructure, Payment, StudentFeeItem, StudentFeeOverride
 
 
 @admin.register(FeeCategory)
@@ -14,6 +14,14 @@ class FeeStructureAdmin(admin.ModelAdmin):
     list_display = ('program', 'category', 'amount', 'is_recurring')
     list_filter = ('program', 'is_recurring')
     autocomplete_fields = ('program', 'category')
+
+
+@admin.register(StudentFeeOverride)
+class StudentFeeOverrideAdmin(admin.ModelAdmin):
+    list_display = ('student', 'category', 'amount', 'is_recurring')
+    list_filter = ('category', 'is_recurring')
+    search_fields = ('student__roll_number', 'student__user__first_name', 'student__user__last_name')
+    autocomplete_fields = ('student', 'category')
 
 
 class PaymentInline(admin.TabularInline):

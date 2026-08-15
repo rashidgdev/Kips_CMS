@@ -32,6 +32,10 @@ class StudentProfile(TimeStampedModel):
         blank=True,
         related_name='students',
     )
+    section = models.CharField(
+        max_length=10, default='A',
+        help_text='Which parallel section of their program+semester cohort this student belongs to.',
+    )
     admission_date = models.DateField()
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=Gender.choices, blank=True)
@@ -68,6 +72,8 @@ class TeacherProfile(TimeStampedModel):
     employment_status = models.CharField(
         max_length=20, choices=EmploymentStatus.choices, default=EmploymentStatus.ACTIVE
     )
+    cnic = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
 
     class Meta:
         ordering = ['employee_id']
@@ -85,6 +91,8 @@ class StaffProfile(TimeStampedModel):
     employee_id = models.CharField(max_length=30, unique=True)
     joining_date = models.DateField()
     notes = models.TextField(blank=True)
+    cnic = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
 
     class Meta:
         ordering = ['employee_id']
