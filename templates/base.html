@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}KIPS CMS{% endblock %} - KIPS College Kasur Campus</title>
+    <link rel="manifest" href="{% url 'pwa-manifest' %}">
+    <meta name="theme-color" content="#1e3a8a">
+    <link rel="apple-touch-icon" href="{% static 'images/pwa/icon-192.png' %}">
     {% tailwind_css %}
 </head>
 <body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
@@ -104,5 +107,8 @@
     <span>KIPS College Kasur Campus &middot; Campus Management System</span>
 </footer>
 </div>
+
+{% include 'common/_pwa_install_modal.html' %}
+<script src="{% static 'js/pwa-install.js' %}" defer></script>
 </body>
 </html>

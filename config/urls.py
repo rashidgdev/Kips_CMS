@@ -3,8 +3,12 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.common import pwa_views
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('manifest.json', pwa_views.manifest_view, name='pwa-manifest'),
+    path('sw.js', pwa_views.service_worker_view, name='pwa-service-worker'),
     path('api/v1/accounts/', include('apps.accounts.api_urls')),
     path('api/v1/academics/', include('apps.academics.api_urls')),
     path('api/v1/assessments/', include('apps.assessments.api_urls')),

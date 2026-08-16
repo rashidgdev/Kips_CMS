@@ -1,0 +1,25 @@
+{% load static icons %}
+<div id="pwa-install-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <div class="animate-scale-in w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+        <div class="flex items-start gap-3">
+            <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-gray-100">
+                <img src="{% static 'images/kips-logo-icon.png' %}" alt="KIPS" class="h-full w-full object-contain">
+            </span>
+            <div class="min-w-0 flex-1">
+                <h2 class="text-base font-semibold text-gray-900">Install KIPS CMS</h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Add KIPS CMS to this device for quick access, like a regular app - no browser bar, launches straight to your dashboard.
+                </p>
+            </div>
+        </div>
+        <div class="mt-5 flex items-center gap-2">
+            <button type="button" id="pwa-install-button" class="btn-primary flex-1">
+                {% icon 'download' 'h-4 w-4' %}
+                Install
+            </button>
+            <button type="button" id="pwa-install-dismiss" class="btn-secondary">
+                Not Now
+            </button>
+        </div>
+    </div>
+</div>
