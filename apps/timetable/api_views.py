@@ -12,7 +12,14 @@ from apps.common.api_permissions import HasRole, resolve_profile
 from .forms import TimeSlotGeneratorForm, TimeSlotResizeForm, TimetableEntryForm
 from .models import Room, TimeSlot, TimetableEntry
 from .serializers import RoomSerializer, TimeSlotSerializer, TimetableEntrySerializer
-from .services import auto_schedule_semester, build_grid, check_conflicts, generate_time_slots, resize_day_slots
+from .services import (
+    auto_schedule_semester,
+    build_grid,
+    check_conflicts,
+    entries_for_semester,
+    generate_time_slots,
+    resize_day_slots,
+)
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN)
 TEACHER_ROLES = (Roles.TEACHER, Roles.HOD)
@@ -100,6 +107,15 @@ def _serialize_grid(grid):
                         'teacher': str(e.course_offering.teacher),
                         'room': str(e.room),
                         'section': e.course_offering.section,
+                        'joint_offerings': [
+                            {
+                                'id': o.pk,
+                                'course': str(o.course),
+                                'program': o.semester.program.code,
+                                'section': o.section,
+                            }
+                            for o in e.joint_offerings.all()
+                        ],
                     }
                     for e in entries
                 ],
@@ -118,7 +134,7 @@ def semester_grid_api(request, semester_id=None):
     semester = _get_semester(semester_id)
     grid = {'days': [], 'rows': []}
     if semester:
-        entries = TimetableEntry.objects.filter(course_offering__semester=semester)
+        entries = entries_for_semester(semester)
         grid = build_grid(entries)
     return Response({
         'semester': {'id': semester.pk, 'name': str(semester)} if semester else None,

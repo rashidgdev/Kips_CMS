@@ -67,11 +67,24 @@ class TimetableEntry(TimeStampedModel):
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+'
     )
+    joint_offerings = models.ManyToManyField(
+        CourseOffering, blank=True, related_name='joint_timetable_entries',
+        help_text='Other course offerings that also attend this same physical class '
+                   '(e.g. two programs sharing one lecture) - not a separate booking.',
+    )
 
     class Meta:
         ordering = ['time_slot']
         # Hard DB-level guarantee: a room can't host two classes in the same weekly slot.
+        # A joint session isn't a second booking - it's a second offering attached to
+        # this same row via joint_offerings, so this constraint still holds correctly.
         unique_together = ('room', 'time_slot')
 
     def __str__(self):
         return f'{self.course_offering} - {self.time_slot} - {self.room}'
+
+    @property
+    def all_offerings(self):
+        """The primary offering plus every joint one - what every grid/PDF/API
+        renderer should iterate over instead of just `course_offering`."""
+        return [self.course_offering, *self.joint_offerings.all()]

@@ -28,6 +28,7 @@ _time_style = ParagraphStyle('GridTime', parent=_styles['Normal'], fontSize=7.5,
 _entry_name_style = ParagraphStyle('GridEntryName', parent=_styles['Normal'], fontSize=7.5, textColor=colors.HexColor('#1E3A8A'), fontName='Helvetica-Bold', leading=9)
 _entry_detail_style = ParagraphStyle('GridEntryDetail', parent=_styles['Normal'], fontSize=6.5, textColor=colors.HexColor('#374151'), leading=8)
 _empty_style = ParagraphStyle('GridEmpty', parent=_styles['Normal'], fontSize=8, textColor=colors.HexColor('#D1D5DB'), alignment=1)
+_joint_style = ParagraphStyle('GridJoint', parent=_styles['Normal'], fontSize=6, textColor=colors.HexColor('#4F46E5'), fontName='Helvetica-Bold', leading=7)
 _break_style = ParagraphStyle('GridBreak', parent=_styles['Normal'], fontSize=8, textColor=colors.HexColor('#92400E'), fontName='Helvetica-Bold', alignment=1)
 
 
@@ -50,6 +51,10 @@ def _period_cell(entries):
             Paragraph(str(entry.room), _entry_detail_style),
             Paragraph(entry.course_offering.teacher.user.get_full_name(), _entry_detail_style),
         ])
+        all_offerings = entry.all_offerings
+        if len(all_offerings) > 1:
+            joint_label = 'Joint: ' + ' + '.join(f'{o.semester.program.code}-{o.section}' for o in all_offerings)
+            blocks.append(Paragraph(joint_label, _joint_style))
     return blocks
 
 

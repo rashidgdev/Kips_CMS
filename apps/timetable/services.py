@@ -106,6 +106,8 @@ def build_grid(entries):
     giant break while still catching every plausible real one."""
     entries = entries.select_related(
         'time_slot', 'room', 'course_offering__course', 'course_offering__teacher__user'
+    ).prefetch_related(
+        'joint_offerings__course', 'joint_offerings__semester__program', 'joint_offerings__teacher__user'
     )
 
     periods = []
@@ -148,6 +150,24 @@ def build_grid(entries):
                 )
 
     return {'days': days, 'rows': rows}
+
+
+def entries_for_semester(semester, section=None):
+    """Every TimetableEntry relevant to `semester` - either as the entry's
+    own (primary) semester, or as a joint offering also attending a class
+    that's primarily someone else's (see TimetableEntry.joint_offerings).
+    Without this, a joint session would never show up on the *joining*
+    offering's own semester grid. Optionally narrowed to one section within
+    that semester (matching whichever side - primary or joint - actually
+    belongs to this semester)."""
+    query = Q(course_offering__semester=semester) | Q(joint_offerings__semester=semester)
+    entries = TimetableEntry.objects.filter(query).distinct()
+    if section:
+        entries = entries.filter(
+            Q(course_offering__semester=semester, course_offering__section=section)
+            | Q(joint_offerings__semester=semester, joint_offerings__section=section)
+        )
+    return entries
 
 
 def auto_schedule_semester(semester, created_by=None):

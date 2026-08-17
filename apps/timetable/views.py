@@ -1,11 +1,11 @@
 import datetime
 
 from django.contrib import messages
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 
-from apps.academics.models import CourseOffering, Enrollment, Semester
+from apps.academics.models import CourseOffering, Enrollment, Program, Semester
 from apps.accounts.models import Roles
 from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudUpdateView
 from apps.common.middleware import get_profile
@@ -14,7 +14,14 @@ from apps.common.permissions import role_required
 from .forms import RoomForm, TimeSlotForm, TimeSlotGeneratorForm, TimeSlotResizeForm, TimetableEntryForm
 from .grid_pdf import render_timetable_grid_pdf
 from .models import Room, TimeSlot, TimetableEntry
-from .services import auto_schedule_semester, build_grid, check_conflicts, generate_time_slots, resize_day_slots
+from .services import (
+    auto_schedule_semester,
+    build_grid,
+    check_conflicts,
+    entries_for_semester,
+    generate_time_slots,
+    resize_day_slots,
+)
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN)
 
@@ -209,9 +216,7 @@ def semester_grid(request, semester_id=None):
             CourseOffering.objects.filter(semester=semester)
             .exclude(section='').values_list('section', flat=True).distinct().order_by('section')
         )
-        entries = TimetableEntry.objects.filter(course_offering__semester=semester)
-        if selected_section:
-            entries = entries.filter(course_offering__section=selected_section)
+        entries = entries_for_semester(semester, section=selected_section or None)
         grid = build_grid(entries)
         pdf_url = reverse('timetable:grid-pdf', args=[semester.pk])
         if selected_section:
@@ -234,12 +239,11 @@ def semester_grid(request, semester_id=None):
 @role_required(Roles.COORDINATOR, Roles.ADMIN)
 def semester_grid_pdf(request, semester_id):
     semester = get_object_or_404(Semester, pk=semester_id)
-    entries = TimetableEntry.objects.filter(course_offering__semester=semester)
     selected_section = request.GET.get('section', '')
     subtitle = str(semester)
     if selected_section:
-        entries = entries.filter(course_offering__section=selected_section)
         subtitle += f' - Section {selected_section}'
+    entries = entries_for_semester(semester, section=selected_section or None)
     grid = build_grid(entries)
     return render_timetable_grid_pdf(grid, 'Timetable', subtitle=subtitle)
 
@@ -305,16 +309,64 @@ def auto_schedule_semester_view(request, semester_id):
     return redirect('timetable:grid-for-semester', semester_id=semester.pk)
 
 
+@role_required(*STAFF_ROLES)
+def join_offering(request, entry_id):
+    """Attaches another course offering to an already-scheduled class,
+    for one physical lecture genuinely shared by two offerings (e.g. two
+    programs' sections sitting together) - not a second booking, so no
+    room/time-slot conflict check applies here at all."""
+    entry = get_object_or_404(TimetableEntry, pk=entry_id)
+
+    if request.method == 'POST':
+        offering_id = request.POST.get('offering')
+        offering = get_object_or_404(CourseOffering, pk=offering_id)
+        if offering.pk == entry.course_offering_id or entry.joint_offerings.filter(pk=offering.pk).exists():
+            messages.error(request, f'{offering} is already attached to this class.')
+        else:
+            entry.joint_offerings.add(offering)
+            messages.success(request, f'{offering} is now joined to this class ({entry.time_slot}, {entry.room}).')
+        return redirect('timetable:grid-for-semester', semester_id=entry.course_offering.semester_id)
+
+    excluded_ids = {entry.course_offering_id} | set(entry.joint_offerings.values_list('pk', flat=True))
+    offerings = CourseOffering.objects.filter(is_active=True).exclude(pk__in=excluded_ids).select_related(
+        'course', 'course__program', 'semester', 'semester__program', 'teacher__user'
+    )
+    programs = Program.objects.filter(is_active=True).order_by('name')
+
+    return render(request, 'timetable/join_offering_form.html', {
+        'entry': entry,
+        'offerings': offerings,
+        'programs': programs,
+    })
+
+
+@role_required(*STAFF_ROLES)
+def unjoin_offering(request, entry_id, offering_id):
+    entry = get_object_or_404(TimetableEntry, pk=entry_id)
+    offering = get_object_or_404(CourseOffering, pk=offering_id)
+    if request.method == 'POST':
+        entry.joint_offerings.remove(offering)
+        messages.success(request, f'{offering} removed from this joint class.')
+    return redirect('timetable:grid-for-semester', semester_id=entry.course_offering.semester_id)
+
+
 def _teacher_current_entries(profile):
     return TimetableEntry.objects.filter(
-        course_offering__teacher=profile, course_offering__semester__is_current=True
-    )
+        Q(course_offering__teacher=profile, course_offering__semester__is_current=True)
+        | Q(joint_offerings__teacher=profile, joint_offerings__semester__is_current=True)
+    ).distinct()
 
 
 def _student_current_entries(profile):
     return TimetableEntry.objects.filter(
-        course_offering__enrollments__student=profile,
-        course_offering__enrollments__status=Enrollment.Status.ENROLLED,
+        Q(
+            course_offering__enrollments__student=profile,
+            course_offering__enrollments__status=Enrollment.Status.ENROLLED,
+        )
+        | Q(
+            joint_offerings__enrollments__student=profile,
+            joint_offerings__enrollments__status=Enrollment.Status.ENROLLED,
+        )
     ).distinct()
 
 

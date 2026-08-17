@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Join Section{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Join Section</h1>
+<p class="mb-6 text-sm text-gray-500">
+    Attach another course offering to this already-scheduled class - for one physical lecture genuinely shared by
+    two sections/programs (e.g. a joint lecture). This does not book anything new, so no room or teacher conflict
+    check applies.
+</p>
+
+<div class="card mb-6 max-w-lg">
+    <h2 class="mb-3 text-sm font-semibold text-gray-700">This Class</h2>
+    <dl class="grid grid-cols-2 gap-3 text-sm">
+        <div><dt class="text-xs text-gray-400">Course</dt><dd class="font-medium text-gray-900">{{ entry.course_offering.course }}</dd></div>
+        <div><dt class="text-xs text-gray-400">Section</dt><dd class="font-medium text-gray-900">{{ entry.course_offering.semester.program.code }}-{{ entry.course_offering.section }}</dd></div>
+        <div><dt class="text-xs text-gray-400">Time</dt><dd class="font-medium text-gray-900">{{ entry.time_slot }}</dd></div>
+        <div><dt class="text-xs text-gray-400">Room</dt><dd class="font-medium text-gray-900">{{ entry.room }}</dd></div>
+        <div><dt class="text-xs text-gray-400">Teacher</dt><dd class="font-medium text-gray-900">{{ entry.course_offering.teacher }}</dd></div>
+        {% if entry.joint_offerings.all %}
+        <div class="col-span-2">
+            <dt class="text-xs text-gray-400">Already joined</dt>
+            <dd class="font-medium text-gray-900">
+                {% for offering in entry.joint_offerings.all %}{% if not forloop.first %}, {% endif %}{{ offering.semester.program.code }}-{{ offering.section }}{% endfor %}
+            </dd>
+        </div>
+        {% endif %}
+    </dl>
+</div>
+
+<div class="card page-enter max-w-lg">
+    <form method="post">
+        {% csrf_token %}
+        <div class="space-y-4">
+            <div>
+                <label for="program-filter" class="field-label">Filter by Program</label>
+                <select id="program-filter" class="input-field">
+                    <option value="">-- All programs --</option>
+                    {% for program in programs %}
+                        <option value="{{ program.pk }}">{{ program }}</option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1.5 text-xs text-gray-400">Narrows the list below - not saved itself.</p>
+            </div>
+
+            <div>
+                <label for="id_offering" class="field-label">Course Offering to Join</label>
+                <select id="id_offering" name="offering" class="input-field" required>
+                    <option value="">-- Select a course offering --</option>
+                    {% for offering in offerings %}
+                        <option value="{{ offering.pk }}" data-program="{{ offering.semester.program_id }}">
+                            {{ offering }} &middot; {{ offering.semester.program.code }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="mt-6 flex items-center gap-3 border-t border-gray-100 pt-5">
+            <button type="submit" class="btn-primary">
+                {% icon 'check-circle' 'h-4 w-4' %}
+                Join This Class
+            </button>
+            <a href="{% url 'timetable:grid-for-semester' entry.course_offering.semester_id %}" class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    var programFilter = document.getElementById('program-filter');
+    var offeringSelect = document.getElementById('id_offering');
+
+    function applyFilter() {
+        var programId = programFilter.value;
+        var hasSelectedVisible = false;
+        Array.from(offeringSelect.options).forEach(function (option) {
+            if (!option.value) return;
+            var matches = !programId || option.dataset.program === programId;
+            option.hidden = !matches;
+            if (matches && option.selected) hasSelectedVisible = true;
+        });
+        if (!hasSelectedVisible) offeringSelect.value = '';
+    }
+
+    programFilter.addEventListener('change', applyFilter);
+    applyFilter();
+})();
+</script>
+{% endblock %}

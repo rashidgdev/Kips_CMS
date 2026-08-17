@@ -37,11 +37,28 @@
                             <div class="text-sm font-medium leading-tight text-blue-900">{{ entry.course_offering.course.title }}</div>
                             <div class="mt-0.5 text-xs text-blue-800/70">{{ entry.room }}</div>
                             <div class="text-xs text-blue-800/70">{{ entry.course_offering.teacher.user.get_full_name }}</div>
+                            {% if entry.joint_offerings.all %}
+                                <div class="mt-1 text-[10px] font-medium text-indigo-600">
+                                    Joint:
+                                    {% for offering in entry.all_offerings %}{% if not forloop.first %} + {% endif %}{{ offering.semester.program.code }}-{{ offering.section }}{% endfor %}
+                                </div>
+                                {% if editable %}
+                                {% for offering in entry.joint_offerings.all %}
+                                <form method="post" action="{% url 'timetable:unjoin-offering' entry.pk offering.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="link-danger text-[10px]">Remove {{ offering.semester.program.code }}-{{ offering.section }}</button>
+                                </form>
+                                {% endfor %}
+                                {% endif %}
+                            {% endif %}
                             {% if editable %}
-                            <form method="post" action="{% url 'timetable:unschedule' entry.pk %}" class="mt-1.5">
-                                {% csrf_token %}
-                                <button type="submit" class="link-danger text-xs">Remove</button>
-                            </form>
+                            <div class="mt-1.5 flex items-center gap-3">
+                                <a href="{% url 'timetable:join-offering' entry.pk %}" class="link text-xs">Join Section</a>
+                                <form method="post" action="{% url 'timetable:unschedule' entry.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="link-danger text-xs">Remove</button>
+                                </form>
+                            </div>
                             {% endif %}
                         </div>
                     {% endfor %}
