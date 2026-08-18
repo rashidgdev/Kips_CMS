@@ -20,6 +20,16 @@ class TailwindFormMixin:
                 widget.attrs.setdefault('class', CHECKBOX_CLASSES)
             elif isinstance(widget, forms.DateInput):
                 widget.attrs.setdefault('class', INPUT_CLASSES)
-                widget.attrs.setdefault('type', 'date')
+                # Widgets read their rendered `type` from `self.input_type`
+                # (set once at construction), not from `attrs['type']` - a
+                # `setdefault` on `attrs` alone just adds a *second*, ignored
+                # `type` attribute to the tag instead of actually changing it.
+                widget.input_type = 'date'
+            elif isinstance(widget, forms.TimeInput):
+                widget.attrs.setdefault('class', INPUT_CLASSES)
+                widget.input_type = 'time'
+            elif isinstance(widget, forms.DateTimeInput):
+                widget.attrs.setdefault('class', INPUT_CLASSES)
+                widget.input_type = 'datetime-local'
             else:
                 widget.attrs.setdefault('class', INPUT_CLASSES)

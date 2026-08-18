@@ -8,6 +8,7 @@ from django.contrib.auth.views import PasswordChangeView
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.common.api_crud_views import ApiCrudDeleteView, ApiCrudFormView, ApiCrudListView
 from apps.common.api_permissions import resolve_profile
@@ -226,46 +227,63 @@ def staff_create(request):
 
 # --- Edit profile ------------------------------------------------------------
 
+def _people_redirect_target(request):
+    """Where to send the admin back to after editing a person - the exact
+    filtered/searched/paginated People-directory view they came from (via
+    `?next=`), when it's present and safe, otherwise the plain unfiltered
+    list. Without this, editing from a filtered view always dumped the
+    admin back at page 1 of the unfiltered directory."""
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return next_url
+    return reverse('accounts:people')
+
+
 @role_required(*STAFF_MANAGEMENT_ROLES)
 def student_edit(request, profile_id):
     profile = get_object_or_404(StudentProfile, pk=profile_id)
+    redirect_target = _people_redirect_target(request)
     if request.method == 'POST':
         form = StudentProfileEditForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
             messages.success(request, 'Student profile updated.')
-            return redirect('accounts:people')
+            return redirect(redirect_target)
     else:
         form = StudentProfileEditForm(instance=profile)
-    return render(request, 'common/generic_form.html', {'form': form, 'page_title': f'Edit {profile}', 'cancel_url': reverse('accounts:people')})
+    return render(request, 'common/generic_form.html', {'form': form, 'page_title': f'Edit {profile}', 'cancel_url': redirect_target})
 
 
 @role_required(*STAFF_MANAGEMENT_ROLES)
 def teacher_edit(request, profile_id):
     profile = get_object_or_404(TeacherProfile, pk=profile_id)
+    redirect_target = _people_redirect_target(request)
     if request.method == 'POST':
         form = TeacherProfileEditForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
             messages.success(request, 'Teacher profile updated.')
-            return redirect('accounts:people')
+            return redirect(redirect_target)
     else:
         form = TeacherProfileEditForm(instance=profile)
-    return render(request, 'common/generic_form.html', {'form': form, 'page_title': f'Edit {profile}', 'cancel_url': reverse('accounts:people')})
+    return render(request, 'common/generic_form.html', {'form': form, 'page_title': f'Edit {profile}', 'cancel_url': redirect_target})
 
 
 @role_required(Roles.ADMIN)
 def staff_edit(request, profile_id):
     profile = get_object_or_404(StaffProfile, pk=profile_id)
+    redirect_target = _people_redirect_target(request)
     if request.method == 'POST':
         form = StaffProfileEditForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
             messages.success(request, 'Staff profile updated.')
-            return redirect('accounts:people')
+            return redirect(redirect_target)
     else:
         form = StaffProfileEditForm(instance=profile)
-    return render(request, 'common/generic_form.html', {'form': form, 'page_title': f'Edit {profile}', 'cancel_url': reverse('accounts:people')})
+    return render(request, 'common/generic_form.html', {'form': form, 'page_title': f'Edit {profile}', 'cancel_url': redirect_target})
 
 
 # --- Bulk import from Excel -------------------------------------------------

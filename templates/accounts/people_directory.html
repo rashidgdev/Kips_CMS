@@ -92,14 +92,14 @@
                 <td class="whitespace-nowrap">
                     <a href="{% url 'accounts:person-profile' person.pk %}" class="link mr-3">View</a>
                     {% if person.role == 'student' and person.student_profile %}
-                        <a href="{% url 'accounts:student-edit' person.student_profile.pk %}" class="link">Edit</a>
+                        <a href="{% url 'accounts:student-edit' person.student_profile.pk %}?next={{ request.get_full_path|urlencode }}" class="link">Edit</a>
                     {% elif person.role == 'teacher' or person.role == 'hod' %}
                         {% if person.teacher_profile %}
-                            <a href="{% url 'accounts:teacher-edit' person.teacher_profile.pk %}" class="link">Edit</a>
+                            <a href="{% url 'accounts:teacher-edit' person.teacher_profile.pk %}?next={{ request.get_full_path|urlencode }}" class="link">Edit</a>
                         {% endif %}
                     {% elif person.staff_profile %}
                         {% if role == 'admin' %}
-                            <a href="{% url 'accounts:staff-edit' person.staff_profile.pk %}" class="link">Edit</a>
+                            <a href="{% url 'accounts:staff-edit' person.staff_profile.pk %}?next={{ request.get_full_path|urlencode }}" class="link">Edit</a>
                         {% endif %}
                     {% endif %}
                     <form method="post" action="{% url 'accounts:toggle-active' person.pk %}" class="inline">

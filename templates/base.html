@@ -96,6 +96,10 @@
         </ul>
     {% endif %}
 
+    <button type="button" onclick="history.back()" class="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">
+        &larr; Back
+    </button>
+
     <div class="page-enter">
         {% block content %}{% endblock %}
     </div>
