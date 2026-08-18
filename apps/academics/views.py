@@ -113,6 +113,8 @@ class CourseListView(CrudListView):
         ('program', 'Program', Program.objects.all()),
         ('semester_number', 'Semester #', None),
     ]
+    search_fields = ['code', 'title']
+    search_placeholder = 'Course code or name...'
 
     def get_queryset(self):
         return super().get_queryset().select_related('program')

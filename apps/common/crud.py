@@ -6,6 +6,7 @@ list/create/update/delete views and templates. Business-logic-heavy screens
 function views elsewhere - this is only for straightforward model CRUD.
 """
 from django.contrib import messages
+from django.db.models import Q
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .permissions import RoleRequiredMixin
@@ -23,6 +24,9 @@ class CrudListView(RoleRequiredMixin, ListView):
     bulk_delete_url_name = None  # POST target for multi-select "Delete Selected"
     row_actions = ()  # [{'url_name': ..., 'label': ...}, ...] - extra per-row links beyond Edit/Delete
     filter_fields = ()  # [(field_name, label, choices_queryset_or_None), ...] - GET-param select filters
+    search_fields = ()  # [field_lookup, ...] - OR'd icontains search via ?<search_param>=
+    search_param = 'q'
+    search_placeholder = 'Search...'
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -30,6 +34,13 @@ class CrudListView(RoleRequiredMixin, ListView):
             value = self.request.GET.get(field_name)
             if value:
                 queryset = queryset.filter(**{field_name: value})
+        if self.search_fields:
+            query = self.request.GET.get(self.search_param, '').strip()
+            if query:
+                condition = Q()
+                for field in self.search_fields:
+                    condition |= Q(**{f'{field}__icontains': query})
+                queryset = queryset.filter(condition)
         return queryset
 
     def get_filter_options(self):
@@ -67,6 +78,9 @@ class CrudListView(RoleRequiredMixin, ListView):
             bulk_delete_url_name=self.bulk_delete_url_name,
             row_actions=self.row_actions,
             filter_options=self.get_filter_options() if self.filter_fields else None,
+            search_param=self.search_param if self.search_fields else None,
+            search_query=self.request.GET.get(self.search_param, '') if self.search_fields else '',
+            search_placeholder=self.search_placeholder,
         )
         return context
 

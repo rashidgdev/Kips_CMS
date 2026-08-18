@@ -20,8 +20,14 @@
     </div>
 </div>
 
-{% if filter_options %}
+{% if filter_options or search_param %}
 <form method="get" class="card mb-4 flex flex-wrap items-end gap-3 page-enter">
+    {% if search_param %}
+    <div class="min-w-[14rem] flex-1">
+        <label class="mb-1 block text-xs font-medium text-gray-500">Search</label>
+        <input type="text" name="{{ search_param }}" value="{{ search_query }}" placeholder="{{ search_placeholder }}" class="input-field">
+    </div>
+    {% endif %}
     {% for filter in filter_options %}
     <div>
         <label class="mb-1 block text-xs font-medium text-gray-500">{{ filter.label }}</label>
@@ -33,6 +39,7 @@
         </select>
     </div>
     {% endfor %}
+    {% if search_param %}<button type="submit" class="btn-secondary">Search</button>{% endif %}
     {% if request.GET %}<a href="{{ request.path }}" class="link mb-2 text-sm">Clear filters</a>{% endif %}
 </form>
 {% endif %}
