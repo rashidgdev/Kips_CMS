@@ -1,0 +1,16 @@
+{# Params: percent (0-100, drives the ring fill), label (caption below),
+   color (Tailwind text-* class for the filled arc, e.g. "text-emerald-600"),
+   display_value (optional override for the center text - defaults to "{{ percent }}%"). #}
+<div class="flex flex-col items-center">
+    <div class="relative inline-flex h-20 w-20 items-center justify-center">
+        <svg viewBox="0 0 36 36" class="h-20 w-20 origin-center -rotate-90">
+            <circle cx="18" cy="18" r="15.915" fill="none" stroke="currentColor" stroke-width="3" class="text-gray-100"></circle>
+            <circle cx="18" cy="18" r="15.915" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                    stroke-dasharray="{{ percent|default:0 }}, 100" class="{{ color|default:'text-blue-600' }} transition-all duration-700"></circle>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+            <span class="text-sm font-bold text-gray-900">{% if display_value %}{{ display_value }}{% else %}{{ percent|default:0 }}%{% endif %}</span>
+        </div>
+    </div>
+    {% if label %}<p class="mt-2 text-center text-xs font-medium text-gray-500">{{ label }}</p>{% endif %}
+</div>

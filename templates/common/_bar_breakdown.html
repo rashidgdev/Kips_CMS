@@ -1,0 +1,22 @@
+{# Params: rows - list of {label, value, percent, color} dicts, where
+   `color` is a Tailwind bg-* class (e.g. "bg-emerald-500") and `percent`
+   is 0-100 (share of the proportional bar). CSS-only, no charting
+   dependency. #}
+<div class="space-y-3">
+    <div class="flex h-3 w-full overflow-hidden rounded-full bg-gray-100">
+        {% for row in rows %}
+            <div class="{{ row.color|default:'bg-blue-500' }}" style="width: {{ row.percent }}%;" title="{{ row.label }}: {{ row.value }}"></div>
+        {% endfor %}
+    </div>
+    <ul class="space-y-1.5">
+        {% for row in rows %}
+        <li class="flex items-center justify-between text-sm">
+            <span class="flex items-center gap-2 text-gray-600">
+                <span class="h-2 w-2 shrink-0 rounded-full {{ row.color|default:'bg-blue-500' }}"></span>
+                {{ row.label }}
+            </span>
+            <span class="font-medium text-gray-900">{{ row.value }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>

@@ -8,6 +8,9 @@
     <link rel="manifest" href="{% url 'pwa-manifest' %}">
     <meta name="theme-color" content="#1e3a8a">
     <link rel="apple-touch-icon" href="{% static 'images/pwa/icon-192.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     {% tailwind_css %}
 </head>
 <body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
@@ -84,8 +87,8 @@
             {% for message in messages %}
                 <li class="flex items-start gap-2 rounded-lg border px-4 py-3 text-sm shadow-sm animate-fade-in-up
                     {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-700
-                    {% elif message.tags == 'warning' %}border-yellow-200 bg-yellow-50 text-yellow-700
-                    {% elif message.tags == 'success' %}border-green-200 bg-green-50 text-green-700
+                    {% elif message.tags == 'warning' %}border-amber-200 bg-amber-50 text-amber-700
+                    {% elif message.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700
                     {% else %}border-blue-200 bg-blue-50 text-blue-800{% endif %}">
                     {% if message.tags == 'error' %}{% icon 'warning' 'h-5 w-5 shrink-0' %}
                     {% elif message.tags == 'success' %}{% icon 'check-circle' 'h-5 w-5 shrink-0' %}

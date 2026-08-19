@@ -1,8 +1,40 @@
 {% extends 'base.html' %}
+{% load icons %}
 {% block title %}HOD Dashboard{% endblock %}
 {% block content %}
-<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
-<p class="mb-6 text-sm text-gray-500">Head of Department &middot; {{ department|default:profile.department }}</p>
+<div class="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 p-6 text-white shadow-lg">
+    <h1 class="text-2xl font-bold">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+    <p class="mt-1 text-sm text-blue-100">Head of Department &middot; {{ department|default:profile.department }}</p>
+</div>
+
+{% url 'daybook:mine' as daybook_url %}
+<div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {% include 'common/_stat_tile.html' with icon='users' label='Department Teachers' value=department_teacher_count color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Department Offerings' value=department_offering_count color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='banknotes' label="Your Workload This Month" value=workload.total_amount|default:0 prefix='Rs.' color='bg-emerald-50 text-emerald-700' href=daybook_url %}
+    {% include 'common/_stat_tile.html' with icon='calendar' label="Today's Classes" value=todays_classes|length color='bg-amber-50 text-amber-700' %}
+</div>
+
+<div class="card page-enter mb-6">
+    <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+        {% icon 'calendar' 'h-5 w-5 text-blue-700' %}
+        Today's Classes
+    </h2>
+    {% if todays_classes %}
+        <ul class="stagger divide-y divide-gray-100 text-sm">
+            {% for entry in todays_classes %}
+            <li class="flex items-center gap-3 py-3">
+                <span class="badge-blue shrink-0">{{ entry.time_slot.start_time|time:"H:i" }}&ndash;{{ entry.time_slot.end_time|time:"H:i" }}</span>
+                <span class="font-medium text-gray-900">{{ entry.course_offering.course }}</span>
+                <span class="text-gray-400">&middot;</span>
+                <span class="text-gray-500">{{ entry.room }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-sm text-gray-500">No classes scheduled today.</p>
+    {% endif %}
+</div>
 
 <div class="card page-enter">
     <h2 class="mb-4 text-lg font-semibold text-gray-900">Your Course Offerings</h2>

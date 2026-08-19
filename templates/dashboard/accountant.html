@@ -2,14 +2,48 @@
 {% load icons %}
 {% block title %}Accountant Dashboard{% endblock %}
 {% block content %}
-<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
-<p class="mb-6 text-sm text-gray-500">Accountant</p>
+<div class="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 p-6 text-white shadow-lg">
+    <h1 class="text-2xl font-bold">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+    <p class="mt-1 text-sm text-blue-100">Accountant</p>
+</div>
 
-<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-    {% include 'common/_stat_tile.html' with icon='users' label='Students' value=student_count color='bg-indigo-50 text-indigo-700' %}
+{% url 'finance:students' as students_url %}
+<div class="stagger mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+    {% include 'common/_stat_tile.html' with icon='users' label='Students' value=student_count color='bg-indigo-50 text-indigo-700' href=students_url %}
     {% include 'common/_stat_tile.html' with icon='banknotes' label='Total Due' value=total_due prefix='Rs.' color='bg-blue-50 text-blue-700' %}
     {% include 'common/_stat_tile.html' with icon='trending-up' label='Total Collected' value=total_paid prefix='Rs.' color='bg-emerald-50 text-emerald-700' %}
-    {% include 'common/_stat_tile.html' with icon='currency' label='Outstanding' value=total_outstanding prefix='Rs.' color='bg-red-50 text-red-700' %}
+    {% include 'common/_stat_tile.html' with icon='currency' label='Outstanding' value=total_outstanding prefix='Rs.' color='bg-amber-50 text-amber-700' %}
+    {% include 'common/_stat_tile.html' with icon='warning' label='Overdue Items' value=overdue_count color='bg-red-50 text-red-700' %}
+</div>
+
+<div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="card page-enter">
+        <h2 class="mb-4 text-lg font-semibold text-gray-900">Recent Payments</h2>
+        {% if recent_payments %}
+            <ul class="stagger divide-y divide-gray-100 text-sm">
+                {% for payment in recent_payments %}
+                <li class="flex items-center justify-between gap-3 py-3">
+                    <div class="min-w-0">
+                        <p class="truncate font-medium text-gray-900">{{ payment.fee_item.student.user.get_full_name }}</p>
+                        <p class="text-xs text-gray-500">{{ payment.fee_item.category }} &middot; {{ payment.payment_date }}</p>
+                    </div>
+                    <span class="shrink-0 font-semibold text-emerald-700">Rs. {{ payment.amount_paid }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-sm text-gray-500">No payments recorded yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card page-enter">
+        <h2 class="mb-4 text-lg font-semibold text-gray-900">Outstanding by Program</h2>
+        {% if program_breakdown %}
+            {% include 'common/_bar_breakdown.html' with rows=program_breakdown %}
+        {% else %}
+            <p class="text-sm text-gray-500">Nothing outstanding right now.</p>
+        {% endif %}
+    </div>
 </div>
 
 <div class="card page-enter flex flex-wrap items-center gap-2 text-sm text-gray-600">

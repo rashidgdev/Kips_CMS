@@ -2,8 +2,18 @@
 {% load icons %}
 {% block title %}Teacher Dashboard{% endblock %}
 {% block content %}
-<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
-<p class="mb-6 text-sm text-gray-500">Employee ID {{ profile.employee_id }} &middot; {{ profile.department }}</p>
+<div class="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 p-6 text-white shadow-lg">
+    <h1 class="text-2xl font-bold">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+    <p class="mt-1 text-sm text-blue-100">Employee ID {{ profile.employee_id }} &middot; {{ profile.department }}</p>
+</div>
+
+{% url 'daybook:mine' as daybook_url %}
+<div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {% include 'common/_stat_tile.html' with icon='users' label='Students Taught' value=student_count color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='calendar' label="Today's Classes" value=todays_classes|length color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='banknotes' label="This Month's Workload" value=workload.total_amount|default:0 prefix='Rs.' color='bg-emerald-50 text-emerald-700' href=daybook_url %}
+    {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Unverified Entries' value=unverified_count color='bg-amber-50 text-amber-700' href=daybook_url %}
+</div>
 
 <div class="card page-enter mb-6">
     <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">

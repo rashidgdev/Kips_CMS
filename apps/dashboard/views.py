@@ -27,38 +27,21 @@ def dashboard_redirect(request):
 def student_dashboard(request):
     profile = get_profile(request)
     data = dashboard_services.get_student_dashboard_data(profile)
-    return render(
-        request,
-        'dashboard/student.html',
-        {
-            'profile': profile,
-            'enrollments': data['enrollments'],
-            'cgpa': data['cgpa'],
-            'current_gpa': data['current_gpa'],
-            'overall_attendance': data['overall_attendance'],
-        },
-    )
+    return render(request, 'dashboard/student.html', {'profile': profile, **data})
 
 
 @role_required(Roles.TEACHER)
 def teacher_dashboard(request):
     profile = get_profile(request)
     data = dashboard_services.get_teacher_dashboard_data(profile)
-    return render(
-        request,
-        'dashboard/teacher.html',
-        {'profile': profile, 'offerings': data['offerings'], 'todays_classes': data['todays_classes']},
-    )
+    return render(request, 'dashboard/teacher.html', {'profile': profile, **data})
 
 
 @role_required(Roles.HOD)
 def hod_dashboard(request):
     profile = get_profile(request)
     data = dashboard_services.get_hod_dashboard_data(profile)
-    return render(
-        request, 'dashboard/hod.html',
-        {'profile': profile, 'department': data['department'], 'offerings': data['offerings']},
-    )
+    return render(request, 'dashboard/hod.html', {'profile': profile, **data})
 
 
 @role_required(Roles.COORDINATOR)

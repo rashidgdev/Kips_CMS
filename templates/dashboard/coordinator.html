@@ -2,21 +2,35 @@
 {% load icons %}
 {% block title %}Coordinator Dashboard{% endblock %}
 {% block content %}
-<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
-<p class="mb-6 text-sm text-gray-500">Campus Coordinator</p>
-
-<div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-    {% include 'common/_stat_tile.html' with icon='book-open' label='Active Programs' value=program_count color='bg-indigo-50 text-indigo-700' %}
-    {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Active Course Offerings' value=offering_count color='bg-blue-50 text-blue-700' %}
+<div class="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 p-6 text-white shadow-lg">
+    <h1 class="text-2xl font-bold">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+    <p class="mt-1 text-sm text-blue-100">Campus Coordinator</p>
 </div>
 
-<div class="card page-enter flex flex-wrap items-center gap-2 text-sm text-gray-600">
-    {% icon 'cog' 'h-5 w-5 shrink-0 text-gray-400' %}
-    <span>
-        Manage programs, semesters, courses, faculty assignments, and enrollments in
-        <a href="{% url 'dashboard:admin-portal' %}" class="link">Administration</a>,
-        or browse attendance, academic, workload, and financial reports in
-        <a href="{% url 'reports:home' %}" class="link">Reports</a>.
-    </span>
+{% url 'daybook:verify-queue' as verify_url %}
+<div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% include 'common/_stat_tile.html' with icon='users' label='Students' value=user_counts.Student|default:0 color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='book-open' label='Active Programs' value=program_count color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Active Course Offerings' value=offering_count color='bg-blue-50 text-blue-700' %}
+    {% include 'common/_stat_tile.html' with icon='currency' label='Outstanding Fees' value=total_outstanding prefix='Rs.' color='bg-amber-50 text-amber-700' %}
+    {% include 'common/_stat_tile.html' with icon='check-circle' label='Unverified Day Book Entries' value=unverified_count color='bg-red-50 text-red-700' href=verify_url %}
+    {% include 'common/_stat_tile.html' with icon='banknotes' label="This Month's Workload" value=workload_total prefix='Rs.' color='bg-emerald-50 text-emerald-700' %}
+</div>
+
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <a href="{% url 'dashboard:admin-portal' %}" class="card-link page-enter flex items-start gap-3">
+        {% icon 'cog' 'h-6 w-6 shrink-0 text-blue-700' %}
+        <div>
+            <h2 class="font-semibold text-gray-900">Administration</h2>
+            <p class="mt-0.5 text-sm text-gray-500">Programs, semesters, courses, faculty assignments, and enrollments.</p>
+        </div>
+    </a>
+    <a href="{% url 'reports:home' %}" class="card-link page-enter flex items-start gap-3">
+        {% icon 'chart-bar' 'h-6 w-6 shrink-0 text-indigo-700' %}
+        <div>
+            <h2 class="font-semibold text-gray-900">Reports</h2>
+            <p class="mt-0.5 text-sm text-gray-500">Attendance, academic, workload, and financial reports.</p>
+        </div>
+    </a>
 </div>
 {% endblock %}

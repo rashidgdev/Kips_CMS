@@ -10,6 +10,8 @@
 @source "../../../**/*.{html,py,js}";
 
 @theme {
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
   --animate-fade-in: fade-in 0.4s ease-out both;
   --animate-fade-in-up: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-scale-in: scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -41,11 +43,11 @@
   }
   .card-hover {
     @apply rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200
-      hover:-translate-y-0.5 hover:shadow-lg;
+      hover:-translate-y-0.5 hover:shadow-xl hover:ring-blue-900/10;
   }
   .card-link {
     @apply block cursor-pointer rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200
-      hover:-translate-y-0.5 hover:shadow-lg;
+      hover:-translate-y-0.5 hover:shadow-xl hover:ring-blue-900/10;
   }
 
   /* Buttons */
@@ -90,12 +92,15 @@
     @apply mb-1.5 block text-sm font-medium text-gray-700;
   }
 
-  /* Badges */
-  .badge-green { @apply inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700; }
+  /* Badges - .badge-green/.badge-yellow keep their names (many templates
+     already reference them) but render in the canonical emerald/amber hues
+     used everywhere else for these two semantic meanings. */
+  .badge-green { @apply inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700; }
   .badge-red { @apply inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700; }
-  .badge-yellow { @apply inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-700; }
+  .badge-yellow { @apply inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700; }
   .badge-blue { @apply inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700; }
   .badge-gray { @apply inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600; }
+  .badge-indigo { @apply inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700; }
 
   /* Tables */
   .table-wrap {
@@ -122,12 +127,14 @@
 
   /* Stat tiles */
   .stat-tile {
-    @apply flex items-center gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200
-      hover:-translate-y-0.5 hover:shadow-lg;
+    @apply relative flex items-center gap-4 overflow-hidden rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200
+      hover:-translate-y-0.5 hover:shadow-xl hover:ring-blue-900/10;
   }
   .stat-icon {
     @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg;
   }
+  .stat-trend-up { @apply text-emerald-600; }
+  .stat-trend-down { @apply text-red-600; }
 
   /* Nav */
   .nav-link {

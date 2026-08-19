@@ -1,13 +1,102 @@
 {% extends 'base.html' %}
+{% load icons %}
 {% block title %}Student Dashboard{% endblock %}
 {% block content %}
-<h1 class="mb-1 text-2xl font-semibold text-gray-900">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
-<p class="mb-6 text-sm text-gray-500">Roll No. {{ profile.roll_number }} &middot; {{ profile.program }}</p>
+<div class="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 p-6 text-white shadow-lg">
+    <h1 class="text-2xl font-bold">Welcome, {{ user.first_name|default:user.username }} 👋</h1>
+    <p class="mt-1 text-sm text-blue-100">Roll No. {{ profile.roll_number }} &middot; {{ profile.program }}</p>
+</div>
 
+<div class="card page-enter mb-6">
+    <div class="grid grid-cols-1 gap-6 divide-y divide-gray-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div class="pt-4 first:pt-0 sm:pt-0 sm:pl-6 sm:first:pl-0">
+            {% include 'common/_progress_ring.html' with percent=cgpa_percent display_value=cgpa|default:"-" label='CGPA (out of 4.0)' color='text-indigo-600' %}
+        </div>
+        <div class="pt-4 first:pt-0 sm:pt-0 sm:pl-6 sm:first:pl-0">
+            {% include 'common/_progress_ring.html' with percent=current_gpa_percent display_value=current_gpa.gpa|default:"-" label='Current Semester GPA' color='text-blue-600' %}
+        </div>
+        <div class="pt-4 first:pt-0 sm:pt-0 sm:pl-6 sm:first:pl-0">
+            {% include 'common/_progress_ring.html' with percent=overall_attendance|default:0 label='Overall Attendance' color='text-emerald-600' %}
+        </div>
+    </div>
+</div>
+
+{% if fee_overview %}
+{% url 'finance:student-overview' as fee_url %}
 <div class="stagger mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-    {% include 'common/_stat_tile.html' with icon='academic-cap' label='CGPA' value=cgpa|default:"-" color='bg-indigo-50 text-indigo-700' %}
-    {% include 'common/_stat_tile.html' with icon='trending-up' label='Current Semester GPA' value=current_gpa.gpa|default:"-" color='bg-blue-50 text-blue-700' %}
-    {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Overall Attendance' value=overall_attendance|default:"-" color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_stat_tile.html' with icon='banknotes' label='Total Fee Due' value=fee_overview.total_due prefix='Rs.' color='bg-blue-50 text-blue-700' href=fee_url %}
+    {% include 'common/_stat_tile.html' with icon='trending-up' label='Total Paid' value=fee_overview.total_paid prefix='Rs.' color='bg-emerald-50 text-emerald-700' href=fee_url %}
+    {% include 'common/_stat_tile.html' with icon='currency' label='Outstanding' value=fee_overview.total_outstanding prefix='Rs.' color='bg-amber-50 text-amber-700' href=fee_url %}
+</div>
+{% endif %}
+
+<div class="card page-enter mb-6">
+    <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+        {% icon 'calendar' 'h-5 w-5 text-blue-700' %}
+        Today's Classes
+    </h2>
+    {% if todays_classes %}
+        <ul class="stagger divide-y divide-gray-100 text-sm">
+            {% for entry in todays_classes %}
+            <li class="flex items-center gap-3 py-3">
+                <span class="badge-blue shrink-0">{{ entry.time_slot.start_time|time:"H:i" }}&ndash;{{ entry.time_slot.end_time|time:"H:i" }}</span>
+                <span class="font-medium text-gray-900">{{ entry.course_offering.course }}</span>
+                <span class="text-gray-400">&middot;</span>
+                <span class="text-gray-500">{{ entry.room }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-sm text-gray-500">No classes scheduled today.</p>
+    {% endif %}
+</div>
+
+<div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="card page-enter">
+        <h2 class="mb-4 text-lg font-semibold text-gray-900">Attendance by Course</h2>
+        {% if attendance_rows %}
+            <div class="table-wrap">
+            <table class="table-modern">
+                <thead><tr><th>Course</th><th>Attended</th><th>%</th><th></th></tr></thead>
+                <tbody>
+                    {% for row in attendance_rows %}
+                    <tr>
+                        <td class="font-medium text-gray-900">{{ row.course_offering.course }}</td>
+                        <td>{{ row.attended }}/{{ row.delivered }}</td>
+                        <td>{{ row.percentage|default:"-" }}{% if row.percentage %}%{% endif %}</td>
+                        <td>{% if row.is_shortage %}<span class="badge-red">Shortage</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        {% else %}
+            <p class="text-sm text-gray-500">No attendance recorded yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card page-enter">
+        <h2 class="mb-4 text-lg font-semibold text-gray-900">Marks by Course</h2>
+        {% if marks_rows %}
+            <div class="table-wrap">
+            <table class="table-modern">
+                <thead><tr><th>Course</th><th>Marks</th><th>%</th><th>Grade</th></tr></thead>
+                <tbody>
+                    {% for row in marks_rows %}
+                    <tr>
+                        <td class="font-medium text-gray-900">{{ row.course_offering.course }}</td>
+                        <td>{{ row.total_obtained }}/{{ row.total_possible }}</td>
+                        <td>{{ row.percentage|default:"-" }}{% if row.percentage %}%{% endif %}</td>
+                        <td>{% if row.grade_letter %}<span class="badge-indigo">{{ row.grade_letter }}</span>{% else %}&ndash;{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        {% else %}
+            <p class="text-sm text-gray-500">No marks entered yet.</p>
+        {% endif %}
+    </div>
 </div>
 
 <div class="card page-enter">
