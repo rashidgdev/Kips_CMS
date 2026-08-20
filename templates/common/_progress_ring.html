@@ -1,6 +1,4 @@
-{# Params: percent (0-100, drives the ring fill), label (caption below),
-   color (Tailwind text-* class for the filled arc, e.g. "text-emerald-600"),
-   display_value (optional override for the center text - defaults to "{{ percent }}%"). #}
+{# Params: percent (0-100, ring fill), label (caption below), color (Tailwind text-* class for the arc), display_value (optional center-text override, defaults to percent%). #}
 <div class="flex flex-col items-center">
     <div class="relative inline-flex h-20 w-20 items-center justify-center">
         <svg viewBox="0 0 36 36" class="h-20 w-20 origin-center -rotate-90">
