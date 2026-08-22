@@ -70,6 +70,7 @@ def admin_portal(request):
         'semesters_url': reverse('academics:semesters'),
         'courses_url': reverse('academics:courses'),
         'offerings_url': reverse('academics:offerings'),
+        'teacher_assignments_url': reverse('reports:teacher-assignments'),
         'enrollments_url': reverse('academics:enrollments'),
         'enroll_by_offering_url': reverse('academics:enroll-by-offering'),
         'enroll_by_student_url': reverse('academics:enroll-by-student'),

@@ -5,6 +5,41 @@ from apps.assessments.models import AssessmentCategory, CourseResult, Mark, Seme
 from apps.attendance.services import get_student_course_stats
 
 
+def get_teacher_assignments_overview():
+    """One row per teacher - how many subjects they teach, and which
+    course/semester/section each one is. Distinct from
+    apps.daybook.services.get_all_teachers_workload (payroll: lecture
+    counts/pay, no course names) and CourseOfferingListView (a flat,
+    ungrouped list of every offering, not grouped by teacher)."""
+    from django.db.models import Prefetch
+
+    from apps.academics.models import CourseOffering
+    from apps.accounts.models import TeacherProfile
+
+    # A plain 'course_offerings__course' prefetch would cache ALL of a
+    # teacher's offerings; calling .filter(is_active=True) on the related
+    # manager in the loop below would then bypass that cache and re-query
+    # per teacher (N+1). A Prefetch with its own filtered/ordered queryset
+    # avoids that - .all() in the loop reads straight from the prefetch cache.
+    active_offerings = Prefetch(
+        'course_offerings',
+        queryset=CourseOffering.objects.filter(is_active=True)
+        .select_related('course', 'semester')
+        .order_by('-semester__is_current', 'semester', 'course'),
+    )
+    teachers = (
+        TeacherProfile.objects.select_related('user', 'department')
+        .prefetch_related(active_offerings)
+        .order_by('employee_id')
+    )
+
+    rows = []
+    for teacher in teachers:
+        offerings = list(teacher.course_offerings.all())
+        rows.append({'teacher': teacher, 'offering_count': len(offerings), 'offerings': offerings})
+    return rows
+
+
 def get_attendance_report(course_offering):
     enrollments = Enrollment.objects.filter(
         course_offering=course_offering, status=Enrollment.Status.ENROLLED

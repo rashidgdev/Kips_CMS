@@ -9,6 +9,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 
+from apps.academics.models import Program
 from apps.accounts.models import Roles, StudentProfile
 from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudUpdateView
 from apps.common.exports import export_excel as export_excel_helper
@@ -44,6 +45,8 @@ class FeeCategoryListView(CrudListView):
     add_url_name = 'finance:category-new'
     edit_url_name = 'finance:category-edit'
     delete_url_name = 'finance:category-delete'
+    search_fields = ['name']
+    search_placeholder = 'Category name...'
 
 
 class FeeCategoryCreateView(CrudCreateView):
@@ -82,6 +85,13 @@ class FeeStructureListView(CrudListView):
     add_url_name = 'finance:structure-new'
     edit_url_name = 'finance:structure-edit'
     delete_url_name = 'finance:structure-delete'
+    filter_fields = [
+        ('program', 'Program', Program.objects.all()),
+        ('category', 'Category', FeeCategory.objects.all()),
+        ('is_recurring', 'Recurring', [(True, 'Recurring'), (False, 'One-time')]),
+    ]
+    search_fields = ['program__code', 'program__name', 'category__name']
+    search_placeholder = 'Program or category...'
 
     def get_queryset(self):
         return super().get_queryset().select_related('program', 'category')

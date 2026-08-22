@@ -42,7 +42,7 @@
             </tbody>
         </table>
         </div>
-        {% include 'common/_pagination.html' %}
+        {% include 'common/_pagination.html' with page_obj=entries is_paginated=entries.has_other_pages %}
     {% else %}
         <p class="text-sm text-gray-500">No lectures logged yet. Take attendance for a lecture to log it here automatically.</p>
     {% endif %}

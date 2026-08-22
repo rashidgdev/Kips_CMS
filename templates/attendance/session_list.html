@@ -39,7 +39,7 @@
             </tbody>
         </table>
         </div>
-        {% include 'common/_pagination.html' %}
+        {% include 'common/_pagination.html' with page_obj=sessions is_paginated=sessions.has_other_pages %}
     {% else %}
         <p class="text-sm text-gray-500">No lecture sessions recorded yet.</p>
     {% endif %}

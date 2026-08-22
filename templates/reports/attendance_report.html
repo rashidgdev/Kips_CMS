@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load icons %}
 {% block title %}Attendance Report{% endblock %}
 {% block content %}
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -27,6 +28,14 @@
 </form>
 
 {% if offering %}
+{% if summary %}
+<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    {% include 'common/_stat_tile.html' with icon='check-circle' label='Total Present' value=summary.present color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_stat_tile.html' with icon='warning' label='Total Absent' value=summary.absent color='bg-red-50 text-red-700' %}
+    {% include 'common/_stat_tile.html' with icon='calendar' label='Total Leave' value=summary.leave_count color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='clock' label='Total Late' value=summary.late color='bg-amber-50 text-amber-700' %}
+</div>
+{% endif %}
 <div class="card page-enter">
     {% if rows %}
         <div class="table-wrap">
@@ -59,7 +68,7 @@
             </tbody>
         </table>
         </div>
-        {% include 'common/_pagination.html' %}
+        {% include 'common/_pagination.html' with page_obj=rows is_paginated=rows.has_other_pages %}
     {% else %}
         <p class="text-sm text-gray-500">No students enrolled in this course.</p>
     {% endif %}

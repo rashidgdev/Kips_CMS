@@ -33,17 +33,27 @@ def mark_attendance_bulk(session, status_by_student_id, marked_by):
 
 
 def get_student_course_stats(student, course_offering):
-    """Compute delivered/attended/absent lecture counts and % for one student+course."""
+    """Compute delivered/attended/present/absent/leave/late lecture counts
+    and % for one student+course. "Attended" (Present+Late) drives the
+    percentage/shortage calculation, unchanged from before - present/late/
+    leave_count/absent are each a direct per-status count (not derived by
+    subtraction), so Leave is never silently folded into Absent."""
     records = AttendanceRecord.objects.filter(session__course_offering=course_offering, student=student)
     delivered = records.count()
-    attended = records.filter(status__in=ATTENDED_STATUSES).count()
-    absent = delivered - attended
+    present = records.filter(status=AttendanceRecord.Status.PRESENT).count()
+    late = records.filter(status=AttendanceRecord.Status.LATE).count()
+    leave_count = records.filter(status=AttendanceRecord.Status.LEAVE).count()
+    absent = records.filter(status=AttendanceRecord.Status.ABSENT).count()
+    attended = present + late
     percentage = round((attended / delivered) * 100, 1) if delivered else None
     threshold = settings.ATTENDANCE_SHORTAGE_THRESHOLD
     return {
         'course_offering': course_offering,
         'delivered': delivered,
         'attended': attended,
+        'present': present,
+        'late': late,
+        'leave_count': leave_count,
         'absent': absent,
         'percentage': percentage,
         'threshold': threshold,

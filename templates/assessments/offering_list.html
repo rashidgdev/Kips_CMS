@@ -29,7 +29,7 @@
             </tbody>
         </table>
         </div>
-        {% include 'common/_pagination.html' %}
+        {% include 'common/_pagination.html' with page_obj=offerings is_paginated=offerings.has_other_pages %}
     {% else %}
         <p class="text-sm text-gray-500">No course offerings assigned to you yet.</p>
     {% endif %}

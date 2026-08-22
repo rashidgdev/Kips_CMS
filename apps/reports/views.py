@@ -12,7 +12,13 @@ from apps.common.pagination import paginate_queryset
 from apps.common.permissions import role_required
 
 from .progress_pdf import render_progress_report_pdf
-from .services import get_academic_report, get_attendance_report, get_merit_list, get_student_progress_report
+from .services import (
+    get_academic_report,
+    get_attendance_report,
+    get_merit_list,
+    get_student_progress_report,
+    get_teacher_assignments_overview,
+)
 
 STAFF_ROLES = (Roles.COORDINATOR, Roles.ADMIN, Roles.TEACHER, Roles.HOD)
 
@@ -78,10 +84,21 @@ def attendance_report(request):
     rows = []
     export_urls = None
 
+    summary = None
     offering_id = request.GET.get('course_offering')
     if offering_id:
         offering = get_object_or_404(offerings, pk=offering_id)
-        rows = paginate_queryset(request, get_attendance_report(offering))
+        all_rows = get_attendance_report(offering)
+        # Class-wide tallies computed from the FULL result set, before
+        # pagination truncates `rows` down to one page's worth.
+        summary = {
+            'delivered': max((r['delivered'] for r in all_rows), default=0),
+            'present': sum(r['present'] for r in all_rows),
+            'absent': sum(r['absent'] for r in all_rows),
+            'leave_count': sum(r['leave_count'] for r in all_rows),
+            'late': sum(r['late'] for r in all_rows),
+        }
+        rows = paginate_queryset(request, all_rows)
         export_urls = {
             'excel': f"{reverse('reports:attendance-export-excel')}?course_offering={offering.pk}",
             'pdf': f"{reverse('reports:attendance-export-pdf')}?course_offering={offering.pk}",
@@ -91,7 +108,8 @@ def attendance_report(request):
         request,
         'reports/attendance_report.html',
         {
-            'offerings': offerings, 'offering': offering, 'rows': rows, 'export_urls': export_urls,
+            'offerings': offerings, 'offering': offering, 'rows': rows, 'summary': summary,
+            'export_urls': export_urls,
             'is_paginated': rows.has_other_pages() if offering_id else False,
         },
     )
@@ -207,6 +225,16 @@ def merit_list_pdf(request):
     semester = get_object_or_404(Semester, pk=request.GET.get('semester'))
     rows = get_merit_list(semester)
     return export_pdf(f'merit_list_{semester}', 'Semester Merit List', MERIT_HEADERS, _merit_export_rows(rows), subtitle=str(semester))
+
+
+@role_required(Roles.COORDINATOR, Roles.ADMIN)
+def teacher_assignments(request):
+    rows = paginate_queryset(request, get_teacher_assignments_overview())
+    return render(
+        request,
+        'reports/teacher_assignments.html',
+        {'rows': rows, 'is_paginated': rows.has_other_pages()},
+    )
 
 
 # --- Student progress report (result card) ----------------------------------

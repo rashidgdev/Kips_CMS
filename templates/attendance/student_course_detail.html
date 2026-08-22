@@ -5,11 +5,13 @@
 <h1 class="mb-1 text-2xl font-semibold text-gray-900">{{ offering.course }}</h1>
 <p class="mb-6 text-sm text-gray-500">{{ offering.semester }} &middot; Section {{ offering.section }}</p>
 
-<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
     {% include 'common/_stat_tile.html' with icon='clipboard-list' label='Delivered' value=stat.delivered color='bg-blue-50 text-blue-700' %}
-    {% include 'common/_stat_tile.html' with icon='check-circle' label='Attended' value=stat.attended color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_stat_tile.html' with icon='check-circle' label='Present' value=stat.present color='bg-emerald-50 text-emerald-700' %}
+    {% include 'common/_stat_tile.html' with icon='clock' label='Late' value=stat.late color='bg-amber-50 text-amber-700' %}
+    {% include 'common/_stat_tile.html' with icon='calendar' label='Leave' value=stat.leave_count color='bg-indigo-50 text-indigo-700' %}
     {% include 'common/_stat_tile.html' with icon='warning' label='Absent' value=stat.absent color='bg-red-50 text-red-700' %}
-    {% include 'common/_stat_tile.html' with icon='trending-up' label='Percentage' value=stat.percentage|default:"-" color='bg-indigo-50 text-indigo-700' %}
+    {% include 'common/_stat_tile.html' with icon='trending-up' label='Percentage' value=stat.percentage|default:"-" color='bg-blue-50 text-blue-700' %}
 </div>
 
 {% if stat.is_shortage %}
@@ -45,7 +47,7 @@
             </tbody>
         </table>
         </div>
-        {% include 'common/_pagination.html' %}
+        {% include 'common/_pagination.html' with page_obj=records is_paginated=records.has_other_pages %}
     {% else %}
         <p class="text-sm text-gray-500">No attendance recorded yet.</p>
     {% endif %}

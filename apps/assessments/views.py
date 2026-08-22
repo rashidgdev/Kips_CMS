@@ -27,6 +27,8 @@ class AssessmentCategoryListView(CrudListView):
     add_url_name = 'assessments:category-new'
     edit_url_name = 'assessments:category-edit'
     delete_url_name = 'assessments:category-delete'
+    search_fields = ['name']
+    search_placeholder = 'Category name...'
 
 
 class AssessmentCategoryCreateView(CrudCreateView):

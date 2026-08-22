@@ -28,6 +28,8 @@ class ApiCrudListView(RoleRequiredMixin, TemplateView):
     created_message = 'Created.'
     updated_message = 'Updated.'
     deleted_message = 'Deleted.'
+    enable_search = False  # requires the API viewset to have a SearchFilter backend wired up
+    search_placeholder = 'Search...'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -44,6 +46,8 @@ class ApiCrudListView(RoleRequiredMixin, TemplateView):
             'createdMessage': self.created_message,
             'updatedMessage': self.updated_message,
             'deletedMessage': self.deleted_message,
+            'enableSearch': self.enable_search,
+            'searchPlaceholder': self.search_placeholder,
         }
         context['page_title'] = self.page_title
         context['crud_config'] = json.dumps(config)

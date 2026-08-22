@@ -36,6 +36,9 @@ class RoomListView(CrudListView):
     add_url_name = 'timetable:room-new'
     edit_url_name = 'timetable:room-edit'
     delete_url_name = 'timetable:room-delete'
+    filter_fields = [('room_type', 'Type', Room.RoomType.choices)]
+    search_fields = ['name', 'building']
+    search_placeholder = 'Room name or building...'
 
 
 class RoomCreateView(CrudCreateView):
@@ -77,6 +80,9 @@ class TimeSlotListView(CrudListView):
     bulk_delete_url_name = 'timetable:timeslot-bulk-delete'
     row_actions = [{'url_name': 'timetable:timeslot-resize', 'label': 'Resize'}]
     extra_actions = [{'url_name': 'timetable:timeslot-generate', 'label': 'Generate Time Slots', 'icon': 'clock'}]
+    filter_fields = [('day_of_week', 'Day', TimeSlot.DayOfWeek.choices)]
+    search_fields = ['label']
+    search_placeholder = 'Label...'
 
 
 class TimeSlotCreateView(CrudCreateView):

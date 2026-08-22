@@ -23,7 +23,12 @@ class CrudListView(RoleRequiredMixin, ListView):
     extra_actions = ()  # [{'url_name': ..., 'label': ..., 'icon': ...}, ...] - secondary buttons next to Add
     bulk_delete_url_name = None  # POST target for multi-select "Delete Selected"
     row_actions = ()  # [{'url_name': ..., 'label': ...}, ...] - extra per-row links beyond Edit/Delete
-    filter_fields = ()  # [(field_name, label, choices_queryset_or_None), ...] - GET-param select filters
+    filter_fields = ()  # [(field_name, label, choices), ...] - GET-param select filters.
+    # `choices` is one of: None (auto-derive distinct raw field values),
+    # a QuerySet (rendered as (pk, str(obj)) - for FK fields), or a plain
+    # list/tuple of (value, label) pairs (for IntegerChoices/TextChoices
+    # fields, e.g. TimeSlot.DayOfWeek.choices, where the raw value alone
+    # isn't a readable label).
     search_fields = ()  # [field_lookup, ...] - OR'd icontains search via ?<search_param>=
     search_param = 'q'
     search_placeholder = 'Search...'
@@ -52,12 +57,16 @@ class CrudListView(RoleRequiredMixin, ListView):
                     .values_list(field_name, flat=True).distinct()
                 )
                 choice_list = [(v, v) for v in sorted(v for v in values if v is not None)]
-            else:
+            elif hasattr(choices, 'all'):
                 # `choices` is a QuerySet stored on the class at import time;
                 # re-clone via `.all()` so each request re-queries instead of
                 # reusing whatever got cached into `_result_cache` the first
                 # time it was ever iterated.
                 choice_list = [(obj.pk, str(obj)) for obj in choices.all()]
+            else:
+                # A plain (value, label) list, e.g. an IntegerChoices/TextChoices
+                # field's own `.choices` - no querying needed.
+                choice_list = list(choices)
             options.append({
                 'name': field_name,
                 'label': label,

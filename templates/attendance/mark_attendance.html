@@ -1,8 +1,42 @@
 {% extends 'base.html' %}
+{% load icons %}
 {% block title %}Mark Attendance{% endblock %}
 {% block content %}
 <h1 class="mb-1 text-2xl font-semibold text-gray-900">{{ session.course_offering.course }}</h1>
 <p class="mb-6 text-sm text-gray-500">{{ session.date }} &middot; {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}{% if session.topic_covered %} &middot; {{ session.topic_covered }}{% endif %}</p>
+
+{% if rows %}
+<div class="stagger mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div class="stat-tile">
+        <span class="stat-icon bg-emerald-50 text-emerald-700">{% icon 'check-circle' 'h-5 w-5' %}</span>
+        <div class="min-w-0">
+            <p class="truncate text-xs font-medium text-gray-500">Present</p>
+            <p id="tally-present" class="text-2xl font-semibold text-gray-900">0</p>
+        </div>
+    </div>
+    <div class="stat-tile">
+        <span class="stat-icon bg-red-50 text-red-700">{% icon 'warning' 'h-5 w-5' %}</span>
+        <div class="min-w-0">
+            <p class="truncate text-xs font-medium text-gray-500">Absent</p>
+            <p id="tally-absent" class="text-2xl font-semibold text-gray-900">0</p>
+        </div>
+    </div>
+    <div class="stat-tile">
+        <span class="stat-icon bg-indigo-50 text-indigo-700">{% icon 'calendar' 'h-5 w-5' %}</span>
+        <div class="min-w-0">
+            <p class="truncate text-xs font-medium text-gray-500">Leave</p>
+            <p id="tally-leave" class="text-2xl font-semibold text-gray-900">0</p>
+        </div>
+    </div>
+    <div class="stat-tile">
+        <span class="stat-icon bg-amber-50 text-amber-700">{% icon 'clock' 'h-5 w-5' %}</span>
+        <div class="min-w-0">
+            <p class="truncate text-xs font-medium text-gray-500">Late</p>
+            <p id="tally-late" class="text-2xl font-semibold text-gray-900">0</p>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="card page-enter">
     {% if rows %}
@@ -23,7 +57,7 @@
                     <td>{{ row.student.roll_number }}</td>
                     <td class="font-medium text-gray-900">{{ row.student.user.get_full_name }}</td>
                     <td>
-                        <select name="status_{{ row.student.pk }}" class="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm transition-colors focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+                        <select name="status_{{ row.student.pk }}" class="attendance-status-select rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm transition-colors focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
                             {% for value, label in status_choices %}
                                 <option value="{{ value }}" {% if value == row.status %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
@@ -42,4 +76,38 @@
         <p class="text-sm text-gray-500">No students are enrolled in this course offering yet.</p>
     {% endif %}
 </div>
+
+{% if rows %}
+<script>
+(function () {
+    'use strict';
+    var selects = document.querySelectorAll('.attendance-status-select');
+    var counters = {
+        present: document.getElementById('tally-present'),
+        absent: document.getElementById('tally-absent'),
+        leave: document.getElementById('tally-leave'),
+        late: document.getElementById('tally-late'),
+    };
+
+    function recount() {
+        var counts = {present: 0, absent: 0, leave: 0, late: 0};
+        selects.forEach(function (select) {
+            if (Object.prototype.hasOwnProperty.call(counts, select.value)) {
+                counts[select.value] += 1;
+            }
+        });
+        Object.keys(counts).forEach(function (key) {
+            if (counters[key]) {
+                counters[key].textContent = counts[key];
+            }
+        });
+    }
+
+    selects.forEach(function (select) {
+        select.addEventListener('change', recount);
+    });
+    recount();
+})();
+</script>
+{% endif %}
 {% endblock %}

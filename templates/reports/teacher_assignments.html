@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load icons %}
+{% block title %}Teacher Assignments{% endblock %}
+{% block content %}
+<h1 class="mb-1 text-2xl font-semibold text-gray-900">Teacher Assignments</h1>
+<p class="mb-6 text-sm text-gray-500">Every teacher, how many subjects they teach, and which course + semester each one is.</p>
+
+{% if rows %}
+<div class="stagger space-y-4">
+    {% for row in rows %}
+    <div class="card">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+                <h2 class="font-semibold text-gray-900">{{ row.teacher.user.get_full_name }}</h2>
+                <p class="text-xs text-gray-500">{{ row.teacher.employee_id }} &middot; {{ row.teacher.department|default:"-" }}</p>
+            </div>
+            <span class="badge-blue">{{ row.offering_count }} subject{{ row.offering_count|pluralize }}</span>
+        </div>
+        {% if row.offerings %}
+            <div class="table-wrap">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Semester</th>
+                        <th>Section</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for offering in row.offerings %}
+                    <tr>
+                        <td class="font-medium text-gray-900">{{ offering.course }}</td>
+                        <td>{{ offering.semester }}</td>
+                        <td>{{ offering.section }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        {% else %}
+            <p class="text-sm text-gray-500">No active course offerings assigned.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% include 'common/_pagination.html' with page_obj=rows is_paginated=rows.has_other_pages %}
+{% else %}
+<div class="card">
+    <p class="text-sm text-gray-500">No teachers found.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -121,6 +121,8 @@ class DepartmentListView(ApiCrudListView):
     created_message = 'Department created.'
     updated_message = 'Department updated.'
     deleted_message = 'Department deleted.'
+    enable_search = True
+    search_placeholder = 'Department code or name...'
 
 
 class DepartmentFormView(ApiCrudFormView):

@@ -15,6 +15,7 @@ urlpatterns = [
     path('merit-list/', views.merit_list, name='merit-list'),
     path('merit-list/export/excel/', views.merit_list_excel, name='merit-export-excel'),
     path('merit-list/export/pdf/', views.merit_list_pdf, name='merit-export-pdf'),
+    path('teacher-assignments/', views.teacher_assignments, name='teacher-assignments'),
 
     path('progress/students/', views.progress_students, name='progress-students'),
     path('progress/my/', views.my_progress_report, name='my-progress'),

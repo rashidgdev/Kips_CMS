@@ -1,7 +1,7 @@
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, status
+from rest_framework import filters, generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -31,6 +31,8 @@ class DepartmentViewSet(RoleScopedModelViewSet):
     queryset = Department.objects.select_related('hod')
     serializer_class = DepartmentSerializer
     allowed_roles = STAFF_MANAGEMENT_ROLES
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'code']
 
 
 # --- Identity --------------------------------------------------------------

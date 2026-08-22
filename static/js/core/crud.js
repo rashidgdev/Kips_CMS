@@ -85,6 +85,7 @@
         const messagesEl = document.getElementById('page-messages');
         const actionsEl = document.getElementById('crud-actions');
         const rootEl = document.getElementById('crud-list-root');
+        const searchRootEl = document.getElementById('crud-search-root');
 
         if (messagesEl) {
             showQueryMessage(messagesEl, {
@@ -107,10 +108,38 @@
 
         const params = new URLSearchParams(location.search);
         const page = params.get('page') || '1';
+        const search = params.get('search') || '';
+
+        if (searchRootEl && config.enableSearch) {
+            searchRootEl.innerHTML = `
+                <form id="crud-search-form" class="card mb-4 flex flex-wrap items-end gap-3 page-enter">
+                    <div class="min-w-[14rem] flex-1">
+                        <label class="mb-1 block text-xs font-medium text-gray-500">Search</label>
+                        <input type="text" id="crud-search-input" value="${escapeHtml(search)}" placeholder="${escapeHtml(config.searchPlaceholder || 'Search...')}" class="input-field">
+                    </div>
+                    <button type="submit" class="btn-secondary">Search</button>
+                    ${search ? `<a href="${location.pathname}" class="link mb-2 text-sm">Clear filters</a>` : ''}
+                </form>`;
+            document.getElementById('crud-search-form').addEventListener('submit', (event) => {
+                event.preventDefault();
+                const value = document.getElementById('crud-search-input').value.trim();
+                const url = new URL(location.href);
+                if (value) {
+                    url.searchParams.set('search', value);
+                } else {
+                    url.searchParams.delete('search');
+                }
+                url.searchParams.delete('page');
+                location.href = url.pathname + url.search;
+            });
+        }
+
+        const fetchParams = { page };
+        if (search) fetchParams.search = search;
 
         let data;
         try {
-            data = await apiFetch(config.apiList, { params: { page } });
+            data = await apiFetch(config.apiList, { params: fetchParams });
         } catch (err) {
             rootEl.innerHTML = `<div class="py-8 text-center"><p class="text-sm text-red-600">Could not load data (${err.status || 'network error'}).</p></div>`;
             return;
@@ -142,13 +171,18 @@
         const pageSize = config.pageSize || 50;
         const numPages = Math.max(1, Math.ceil(data.count / pageSize));
         const currentPage = parseInt(page, 10) || 1;
+        const pageUrl = (targetPage) => {
+            const url = new URL(location.href);
+            url.searchParams.set('page', targetPage);
+            return url.pathname + url.search;
+        };
         let paginationHtml = '';
         if (numPages > 1) {
             const prevLink = data.previous
-                ? `<a href="?page=${currentPage - 1}" class="link">&laquo; Previous</a>`
+                ? `<a href="${escapeHtml(pageUrl(currentPage - 1))}" class="link">&laquo; Previous</a>`
                 : '<span></span>';
             const nextLink = data.next
-                ? `<a href="?page=${currentPage + 1}" class="link">Next &raquo;</a>`
+                ? `<a href="${escapeHtml(pageUrl(currentPage + 1))}" class="link">Next &raquo;</a>`
                 : '<span></span>';
             paginationHtml = `
                 <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 text-sm text-gray-500">

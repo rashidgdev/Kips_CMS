@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 
-from apps.accounts.models import Roles, StudentProfile
+from apps.accounts.models import Department, Roles, StudentProfile, TeacherProfile
 from apps.common.crud import CrudCreateView, CrudDeleteView, CrudListView, CrudUpdateView
 from apps.common.permissions import role_required
 
@@ -26,6 +26,13 @@ class ProgramListView(CrudListView):
     add_url_name = 'academics:program-new'
     edit_url_name = 'academics:program-edit'
     delete_url_name = 'academics:program-delete'
+    filter_fields = [
+        ('department', 'Department', Department.objects.all()),
+        ('degree_level', 'Level', Program.DegreeLevel.choices),
+        ('is_active', 'Active', [(True, 'Active'), (False, 'Inactive')]),
+    ]
+    search_fields = ['code', 'name']
+    search_placeholder = 'Program code or name...'
 
 
 class ProgramCreateView(CrudCreateView):
@@ -66,6 +73,12 @@ class SemesterListView(CrudListView):
     add_url_name = 'academics:semester-new'
     edit_url_name = 'academics:semester-edit'
     delete_url_name = 'academics:semester-delete'
+    filter_fields = [
+        ('program', 'Program', Program.objects.all()),
+        ('is_current', 'Current', [(True, 'Current'), (False, 'Not Current')]),
+    ]
+    search_fields = ['academic_year']
+    search_placeholder = 'Academic year...'
 
     def get_queryset(self):
         return super().get_queryset().select_related('program')
@@ -158,6 +171,16 @@ class CourseOfferingListView(CrudListView):
     add_url_name = 'academics:offering-new'
     edit_url_name = 'academics:offering-edit'
     delete_url_name = 'academics:offering-delete'
+    filter_fields = [
+        ('semester', 'Semester', Semester.objects.all()),
+        ('teacher', 'Teacher', TeacherProfile.objects.select_related('user')),
+        ('is_active', 'Active', [(True, 'Active'), (False, 'Inactive')]),
+    ]
+    search_fields = [
+        'course__code', 'course__title', 'section',
+        'teacher__employee_id', 'teacher__user__first_name', 'teacher__user__last_name',
+    ]
+    search_placeholder = 'Course, section, or teacher...'
 
     def get_queryset(self):
         return super().get_queryset().select_related('course', 'semester', 'teacher__user')
@@ -221,6 +244,14 @@ class EnrollmentListView(CrudListView):
     add_url_name = 'academics:enrollment-new'
     edit_url_name = 'academics:enrollment-edit'
     delete_url_name = 'academics:enrollment-delete'
+    filter_fields = [
+        ('status', 'Status', Enrollment.Status.choices),
+    ]
+    search_fields = [
+        'student__roll_number', 'student__user__first_name', 'student__user__last_name',
+        'course_offering__course__code',
+    ]
+    search_placeholder = 'Student roll #/name or course code...'
 
     def get_queryset(self):
         return super().get_queryset().select_related(
